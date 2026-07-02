@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Environments
+.venv/
+venv/
+env/
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Data & artifacts — synthetic/generated; NEVER commit real customer data
+data/
+reports/
+*.parquet
+*.pkl
+*.joblib
+
+# OS
+.DS_Store
