@@ -25,3 +25,7 @@ reports/
 
 # OS
 .DS_Store
+
+# Local reference material — local working notes and third-party papers.
+# Kept local only (large binaries + copyrighted content; not part of the project).
+local-notes/
