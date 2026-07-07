@@ -23,3 +23,9 @@
 - `churnpilot/cli.py`: `init` command scaffolds `churn.yaml` (won't overwrite without `--force`).
 - Added deps `pydantic`, `types-PyYAML`; added `[tool.mypy]` (python 3.11 + pydantic plugin).
 - `tests/test_config.py`: 12 tests (valid/default/error paths + `init` round-trip). Full suite 14 green; ruff + mypy clean. (Closes #1)
+
+## 2026-07-07 — S2: generate (#2)
+- `churnpilot/generate.py`: deterministic `make_panel()` — simulates subscriber lifetimes into a 25-column streaming churn panel with the 4 levers (watch-hours drift across cohorts, ~10% churn via bisection-solved intercept, missingness, planted `cancel_flow_visits_30d` leakage) + derived `cltv`. Vectorized grid + first-churn truncation.
+- `churnpilot/cli.py`: `generate` command (writes parquet + prints summary).
+- `tests/test_generate.py`: 9 tests (determinism, schema, imbalance, drift trend, missingness, leakage-trap separation, churn-is-last-row truncation, sanity). Full suite 23 green; ruff + mypy clean.
+- Added mypy override for untyped `pandas`. Spec recorded in `docs/synthetic-data.md`. Full run: 8k×24 → 59,683 rows, churn 0.100, ~0.8 MB. (Closes #2)

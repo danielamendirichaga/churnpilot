@@ -54,5 +54,24 @@ def init(
     typer.echo(f"Wrote {path}. Edit it to point churnpilot at your data.")
 
 
+@app.command()
+def generate(
+    out: Path = typer.Option(
+        Path("data/churn_panel.parquet"), "--out", help="Output parquet path."
+    ),
+    subscribers: int = typer.Option(8000, "--subscribers", help="Number of subscribers."),
+    months: int = typer.Option(24, "--months", help="Number of monthly cohorts."),
+    seed: int = typer.Option(42, "--seed", help="RNG seed (deterministic)."),
+) -> None:
+    """Generate the deterministic synthetic streaming churn panel (no real data)."""
+    from .generate import make_panel, summarize
+
+    df = make_panel(n_subscribers=subscribers, n_months=months, seed=seed)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    df.to_parquet(out, index=False)
+    typer.echo(f"Wrote {out}")
+    typer.echo(summarize(df))
+
+
 if __name__ == "__main__":  # pragma: no cover
     app()

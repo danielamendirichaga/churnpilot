@@ -7,16 +7,17 @@
 - **Planning — PRD complete.** `docs/context.md`, `docs/ADRs.md` (10 ADRs), `docs/PRD.md` (3 layers, 12 user stories, functional requirements, 13-slice v1 breakdown with traceability).
 - **GitHub issues #1–#13 created** (one per slice S1–S13, label `v1-slice`).
 - **S1 (#1) — Config + `init` — DONE.** `churn.yaml` Pydantic schema (`ChurnConfig`/`SourceConfig`/`ColumnMap`), `load_config` (graceful `ConfigError`), `init` command + template. Added `pydantic`/`types-PyYAML` deps + `[tool.mypy]` (pydantic plugin). Verified: ruff + mypy clean, 14 tests green, `churnpilot init` round-trips.
+- **S2 (#2) — `generate` — DONE.** Deterministic synthetic streaming panel (`churnpilot/generate.py` `make_panel`); 25-col schema + 4 levers (drift/imbalance/missingness/leakage trap) + cltv; `generate` CLI writes parquet + summary. Verified: ruff + mypy clean, 23 tests green; full run 8k×24 = 59,683 rows, churn 0.100, ~1s. Spec: `docs/synthetic-data.md`.
 
 ## In progress
 - Nothing.
 
 ## Active issue
-- **#2 — S2: `generate`** (next to build).
+- **#3 — S3: `source` + `validate`** (next to build).
 
 ## Next up
-1. Build **S2 (#2): `generate`** — seeded synthetic Netflix-style panel (feature schema + 4 levers + cltv + leakage trap) + determinism test.
-2. Then S3 `source`+`validate` (#3), S4 `profile` (#4), … per `docs/PRD.md` §7.
+1. Build **S3 (#3): `source` + `validate`** — unified loader (db/file/synthetic) + graceful validation report.
+2. Then S4 `profile` (#4), S5 metric core (#5), … per `docs/PRD.md` §7.
 
 ## Key locked decisions (see docs/DESIGN_BRIEF.md for full detail)
 - Domain: streaming monthly subscription; target `churn_next_30d` (binary, next-cycle).
