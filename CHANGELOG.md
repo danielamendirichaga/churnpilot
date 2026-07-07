@@ -45,3 +45,9 @@
 - `churnpilot/metrics.py` (numpy/pandas only — the tested compute core): `ks_table` (decile KS), `psi` (frozen reference edges), `rank_order_breaks`, `gain_table`/`top_decile_lift`, `roc_auc` (rank formula), `average_precision` (PR-AUC), `precision_recall_f1`, `log_loss`, `calibration_table`/`expected_calibration_error` — all reimplemented clean-room by hand.
 - `churnpilot/cli.py`: `metrics` command (KS/ROB/lift/AUC for a `--score-col` vs the target; optional `--reference` for score PSI).
 - `tests/test_metrics.py` (15): PSI-identical=0, PSI-shift major, KS separable/random, ROB monotone/inverted, lift, AUC perfect/random, AP, precision/recall/F1, log-loss=ln2, calibration ECE. Full suite 62 green; ruff + mypy clean. Smoke: leakage feature 0.9998 AUC / 9.85× lift vs genuine driver 0.62 AUC. (Closes #5)
+
+## 2026-07-07 — S6: split + the artifact/contract layer (#6)
+- `churnpilot/artifacts.py`: `ArtifactBase` (Pydantic, `extra="forbid"`, `parent_sha256` lineage, `write_json`) + `content_hash(df)` — the medium contract tier foundation (ADR-009).
+- `churnpilot/split.py`: `split_dataset()` with `time` (out-of-time, default) / `grouped` (disjoint subscribers) / `random` (row-wise) strategies; a leakage guard (row-disjoint, time-ordered, subscriber-overlap) that warns on random-split entity leakage; emits a `SplitManifest` artifact.
+- `churnpilot/cli.py`: `split` command (writes train/val/test parquets + `split-manifest.json`; reports the leakage verdict).
+- `tests/test_split.py` (9): time-ordering, grouped disjointness, random entity-leakage warning, ratios, snapshot+time error, manifest lineage + JSON round-trip, determinism. Full suite 71 green; ruff + mypy clean. Smoke: time ✔ (1,334 legit overlap) vs random ⚠ (4,822 leaked). (Closes #6)

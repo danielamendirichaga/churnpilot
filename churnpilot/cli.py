@@ -195,5 +195,48 @@ def metrics(
             )
 
 
+@app.command()
+def split(
+    strategy: str = typer.Option("time", "--strategy", help="time | grouped | random."),
+    config: Path = typer.Option(
+        Path("churn.yaml"), "--config", help="Path to the churn.yaml config."
+    ),
+    out_dir: Path = typer.Option(
+        Path("data/splits"), "--out-dir", help="Where to write the splits + manifest."
+    ),
+    seed: int = typer.Option(42, "--seed", help="RNG seed (grouped/random)."),
+) -> None:
+    """Split into train/val/test with a leakage guard; writes parquets + a split-manifest."""
+    from .split import SplitError, split_dataset
+
+    cfg, df = _load(config)
+    try:
+        train, val, test, manifest = split_dataset(df, cfg, strategy=strategy, seed=seed)
+    except SplitError as exc:
+        typer.echo(str(exc))
+        raise typer.Exit(code=1) from exc
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    train.to_parquet(out_dir / "train.parquet", index=False)
+    val.to_parquet(out_dir / "val.parquet", index=False)
+    test.to_parquet(out_dir / "test.parquet", index=False)
+    manifest.write_json(out_dir / "split-manifest.json")
+
+    typer.echo(f"Split ({strategy}) → {out_dir}")
+    for name, info in (("train", manifest.train), ("val", manifest.val), ("test", manifest.test)):
+        typer.echo(f"  {name}: {info.rows:,} rows, churn {info.positive_rate:.1%}")
+    lk = manifest.leakage
+    if lk.status == "warn":
+        typer.echo(
+            f"  ⚠ entity leakage: {lk.subscriber_overlap:,} subscribers in BOTH train & test "
+            "— use --strategy time"
+        )
+    else:
+        detail = "expected for time split" if strategy == "time" else "subscribers disjoint"
+        typer.echo(
+            f"  ✔ leakage guard ok ({lk.subscriber_overlap:,} subscriber overlap — {detail})"
+        )
+
+
 if __name__ == "__main__":  # pragma: no cover
     app()

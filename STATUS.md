@@ -11,16 +11,17 @@
 - **S3 (#3) — `source` + `validate` — DONE.** `source.py` `load_data` (synthetic/file[parquet,csv]/sqlite tested; postgres path present). `validate.py` `validate` → graded `ValidationReport` (✔/⚠/✗), panel-vs-snapshot mode, fails gracefully. `validate` CLI (loads config→data→report, non-zero exit on hard fail). Verified: ruff + mypy clean, 40 tests green; smoke on healthy + broken configs.
 - **S4 (#4) — `profile` — DONE.** `profile.py` `profile_frame` (config-driven roles + null rate + cardinality + numeric stats + numeric-feature target_corr) and `high_corr_features` (leakage hint). `profile` CLI prints the EDA table + a `⚠ possible leakage` line. Shared `_load` helper in cli.py (validate+profile). Verified: ruff + mypy clean, 47 tests green; smoke flags `cancel_flow_visits_30d` at +0.92.
 - **S5 (#5) — metric core + `metrics` — DONE.** `metrics.py` (numpy/pandas only): `ks_table`, `psi` (frozen edges), `rank_order_breaks`, `gain_table`/`top_decile_lift`, `roc_auc`, `average_precision` (PR-AUC), `precision_recall_f1`, `log_loss`, `calibration_table`/`expected_calibration_error`. `metrics` CLI (score-col vs target + optional reference PSI). Verified: ruff + mypy clean, 62 tests green; smoke — leakage feature 0.9998 AUC vs genuine driver 0.62.
+- **S6 (#6) — `split` — DONE.** `artifacts.py` (**`ArtifactBase`** + `parent_sha256` lineage + `content_hash` + JSON sidecar — the contract layer). `split.py` `split_dataset` (time/grouped/random) + leakage guard + `SplitManifest`. `split` CLI writes 3 parquets + `split-manifest.json`. Verified: ruff + mypy clean, 71 tests green; smoke — time is time-ordered (1,334 legit overlap, ✔), random flags 4,822 entity leakage (⚠).
 
 ## In progress
 - Nothing.
 
 ## Active issue
-- **#6 — S6: `split`** (next to build).
+- **#7 — S7: `train`** (next to build).
 
 ## Next up
-1. Build **S6 (#6): `split`** — time-aware / grouped / random split + leakage guard; emit `split-manifest` artifact (first Pydantic artifact w/ lineage).
-2. Then S7 `train` (#7), S8 `compare` (#8), … per `docs/PRD.md` §7.
+1. Build **S7 (#7): `train`** — model menu (logistic/tree/RF/XGBoost) in a leakage-safe pipeline + SMOTE option + calibration + baseline floor; emit `model-card`. *(Re-read the course notebooks' XGBoost/pipeline cells before building.)*
+2. Then S8 `compare` (#8), S9 `evaluate` (#9), … per `docs/PRD.md` §7.
 
 ## Key locked decisions (see docs/DESIGN_BRIEF.md for full detail)
 - Domain: streaming monthly subscription; target `churn_next_30d` (binary, next-cycle).
