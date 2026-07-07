@@ -53,8 +53,8 @@ target-version = "py311"
 python_version = "3.11"
 plugins = ["pydantic.mypy"]
 
-# pandas ships no type stubs; pandas-stubs is too strict for this teaching codebase.
-# Treat pandas as untyped rather than fully type-checking DataFrame ops.
+# pandas ships no type stubs (pandas-stubs is too strict here); sqlalchemy is an optional,
+# guarded import for the postgres source. Treat both as untyped.
 [[tool.mypy.overrides]]
-module = "pandas.*"
+module = ["pandas.*", "sqlalchemy.*"]
 ignore_missing_imports = true

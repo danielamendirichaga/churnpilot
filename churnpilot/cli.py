@@ -73,5 +73,33 @@ def generate(
     typer.echo(summarize(df))
 
 
+@app.command()
+def validate(
+    config: Path = typer.Option(
+        Path("churn.yaml"), "--config", help="Path to the churn.yaml config."
+    ),
+) -> None:
+    """Check that the configured dataset is usable by churnpilot (fails gracefully)."""
+    from .config import ConfigError, load_config
+    from .source import SourceError, load_data
+    from .validate import validate as run_validate
+
+    try:
+        cfg = load_config(config)
+    except ConfigError as exc:
+        typer.echo(str(exc))
+        raise typer.Exit(code=1) from exc
+    try:
+        df = load_data(cfg)
+    except SourceError as exc:
+        typer.echo(f"Could not load data: {exc}")
+        raise typer.Exit(code=1) from exc
+
+    report = run_validate(df, cfg)
+    typer.echo(report.render())
+    if not report.ok:
+        raise typer.Exit(code=1)
+
+
 if __name__ == "__main__":  # pragma: no cover
     app()

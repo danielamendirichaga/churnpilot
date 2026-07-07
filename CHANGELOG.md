@@ -29,3 +29,9 @@
 - `churnpilot/cli.py`: `generate` command (writes parquet + prints summary).
 - `tests/test_generate.py`: 9 tests (determinism, schema, imbalance, drift trend, missingness, leakage-trap separation, churn-is-last-row truncation, sanity). Full suite 23 green; ruff + mypy clean.
 - Added mypy override for untyped `pandas`. Spec recorded in `docs/synthetic-data.md`. Full run: 8k×24 → 59,683 rows, churn 0.100, ~0.8 MB. (Closes #2)
+
+## 2026-07-07 — S3: source + validate (#3)
+- `churnpilot/source.py`: `load_data(config)` behind one interface — synthetic (`make_panel`), file (parquet/csv), sqlite (stdlib), postgres (guarded SQLAlchemy path); errors surface as `SourceError`.
+- `churnpilot/validate.py`: `validate(df, config)` → graded `ValidationReport` (✔ pass / ⚠ warn / ✗ fail) covering rows, target (2 classes + positive_value present), panel-vs-snapshot mode, id uniqueness, value_col, features, missingness. Fails gracefully (no traceback).
+- `churnpilot/cli.py`: `validate` command (config → data → report; non-zero exit on hard fail).
+- `tests/test_source.py` (7) + `tests/test_validate.py` (10). Full suite 40 green; ruff + mypy clean. Extended mypy override to `sqlalchemy`. (Closes #3)
