@@ -151,5 +151,49 @@ def profile(
         typer.echo(f"⚠ high target correlation — possible leakage: {hits}")
 
 
+@app.command()
+def metrics(
+    score_col: str = typer.Option(..., "--score-col", help="Column to treat as the risk score."),
+    config: Path = typer.Option(
+        Path("churn.yaml"), "--config", help="Path to the churn.yaml config."
+    ),
+    reference: Path = typer.Option(
+        None, "--reference", help="Optional reference parquet for score PSI (drift)."
+    ),
+    n_bins: int = typer.Option(10, "--n-bins", help="Number of quantile deciles."),
+) -> None:
+    """Report discrimination/targeting metrics for a score column vs. the target."""
+    import pandas as pd
+
+    from . import metrics as m
+
+    cfg, df = _load(config)
+    label = cfg.columns.target_col
+    if score_col not in df.columns:
+        typer.echo(f"score column {score_col!r} not found in data.")
+        raise typer.Exit(code=1)
+    y = (df[label] == cfg.columns.positive_value).astype(int)
+    s = pd.to_numeric(df[score_col], errors="coerce")
+
+    ks = m.ks_table(y, s, n_bins=n_bins)
+    typer.echo(f"Metrics for score '{score_col}' vs target '{label}'  ({len(df):,} rows)")
+    typer.echo("")
+    typer.echo(f"  ROC-AUC          : {m.roc_auc(y, s):.4f}")
+    typer.echo(f"  PR-AUC (AP)      : {m.average_precision(y, s):.4f}")
+    typer.echo(f"  KS (decile)      : {ks.ks:.4f}   over {ks.n_bins} deciles")
+    typer.echo(f"  top-decile lift  : {m.top_decile_lift(y, s):.3f}x")
+    typer.echo(f"  rank-order breaks: {m.rank_order_breaks(y, s, n_bins=n_bins)}   (0 = clean)")
+
+    if reference is not None:
+        ref = pd.read_parquet(reference)
+        if score_col not in ref.columns:
+            typer.echo(f"\n⚠ score column {score_col!r} not in reference — skipping PSI.")
+        else:
+            val = m.psi(ref[score_col], df[score_col], n_bins=n_bins)
+            typer.echo(
+                f"\n  score PSI (ref→data): {val:.4f}   (<0.1 stable, 0.1–0.25 moderate, >0.25 major)"
+            )
+
+
 if __name__ == "__main__":  # pragma: no cover
     app()

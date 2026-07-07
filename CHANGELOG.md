@@ -40,3 +40,8 @@
 - `churnpilot/profile.py`: `profile_frame(df, config)` → per-column role (config-driven for id/date/target), null rate, cardinality, numeric summary stats, and numeric-feature `target_corr`; `high_corr_features()` surfaces a leakage hint.
 - `churnpilot/cli.py`: `profile` command (prints the EDA table + a `⚠ possible leakage` line); factored a shared `_load()` config+data helper (reused by `validate`).
 - `tests/test_profile.py` (8): roles, numeric stats, null rates, target-corr signs, and that the leakage hint flags `cancel_flow_visits_30d` (not genuine drivers). Full suite 47 green; ruff + mypy clean. Smoke: leak at +0.92 vs. real drivers ~0.12. (Closes #4)
+
+## 2026-07-07 — S5: metric core + metrics (#5)
+- `churnpilot/metrics.py` (numpy/pandas only — the tested compute core): `ks_table` (decile KS), `psi` (frozen reference edges), `rank_order_breaks`, `gain_table`/`top_decile_lift`, `roc_auc` (rank formula), `average_precision` (PR-AUC), `precision_recall_f1`, `log_loss`, `calibration_table`/`expected_calibration_error` — all reimplemented clean-room by hand.
+- `churnpilot/cli.py`: `metrics` command (KS/ROB/lift/AUC for a `--score-col` vs the target; optional `--reference` for score PSI).
+- `tests/test_metrics.py` (15): PSI-identical=0, PSI-shift major, KS separable/random, ROB monotone/inverted, lift, AUC perfect/random, AP, precision/recall/F1, log-loss=ln2, calibration ECE. Full suite 62 green; ruff + mypy clean. Smoke: leakage feature 0.9998 AUC / 9.85× lift vs genuine driver 0.62 AUC. (Closes #5)

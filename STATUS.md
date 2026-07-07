@@ -10,16 +10,17 @@
 - **S2 (#2) — `generate` — DONE.** Deterministic synthetic streaming panel (`churnpilot/generate.py` `make_panel`); 25-col schema + 4 levers (drift/imbalance/missingness/leakage trap) + cltv; `generate` CLI writes parquet + summary. Verified: ruff + mypy clean, 23 tests green; full run 8k×24 = 59,683 rows, churn 0.100, ~1s. Spec: `docs/synthetic-data.md`.
 - **S3 (#3) — `source` + `validate` — DONE.** `source.py` `load_data` (synthetic/file[parquet,csv]/sqlite tested; postgres path present). `validate.py` `validate` → graded `ValidationReport` (✔/⚠/✗), panel-vs-snapshot mode, fails gracefully. `validate` CLI (loads config→data→report, non-zero exit on hard fail). Verified: ruff + mypy clean, 40 tests green; smoke on healthy + broken configs.
 - **S4 (#4) — `profile` — DONE.** `profile.py` `profile_frame` (config-driven roles + null rate + cardinality + numeric stats + numeric-feature target_corr) and `high_corr_features` (leakage hint). `profile` CLI prints the EDA table + a `⚠ possible leakage` line. Shared `_load` helper in cli.py (validate+profile). Verified: ruff + mypy clean, 47 tests green; smoke flags `cancel_flow_visits_30d` at +0.92.
+- **S5 (#5) — metric core + `metrics` — DONE.** `metrics.py` (numpy/pandas only): `ks_table`, `psi` (frozen edges), `rank_order_breaks`, `gain_table`/`top_decile_lift`, `roc_auc`, `average_precision` (PR-AUC), `precision_recall_f1`, `log_loss`, `calibration_table`/`expected_calibration_error`. `metrics` CLI (score-col vs target + optional reference PSI). Verified: ruff + mypy clean, 62 tests green; smoke — leakage feature 0.9998 AUC vs genuine driver 0.62.
 
 ## In progress
 - Nothing.
 
 ## Active issue
-- **#5 — S5: metric core + `metrics`** (next to build).
+- **#6 — S6: `split`** (next to build).
 
 ## Next up
-1. Build **S5 (#5): metric core** — tested pure functions (KS, PSI, rank-order-breaks, lift/gain, precision/recall/F1, log-loss, calibration) + `metrics` command. numpy/pandas only.
-2. Then S6 `split` (#6), S7 `train` (#7), … per `docs/PRD.md` §7.
+1. Build **S6 (#6): `split`** — time-aware / grouped / random split + leakage guard; emit `split-manifest` artifact (first Pydantic artifact w/ lineage).
+2. Then S7 `train` (#7), S8 `compare` (#8), … per `docs/PRD.md` §7.
 
 ## Key locked decisions (see docs/DESIGN_BRIEF.md for full detail)
 - Domain: streaming monthly subscription; target `churn_next_30d` (binary, next-cycle).
