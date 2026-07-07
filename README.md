@@ -8,10 +8,10 @@ Point it at a customer table (via one `churn.yaml`) and an AI agent drives a rep
 pipeline to predict who will churn, decide who to save under a budget, and watch for drift —
 proposing and explaining every step while the data scientist stays in charge.
 
-> **Status: in active development.** The core engine — *generate → validate → profile →
-> metrics → split → train* — is built and tested (88 passing tests). Model comparison, policy
-> simulation, drift monitoring, and reporting are next. See [STATUS.md](STATUS.md) for live
-> progress and [CHANGELOG.md](CHANGELOG.md) for history.
+> **Status: v1 complete.** The full pipeline — *generate → validate → profile → metrics →
+> split → train → compare → evaluate → simulate-policy → report → monitor* — is built and
+> tested (118 passing tests). Next: an interactive Streamlit dashboard (v1.1) and uplift/causal
+> modeling (v2). See [STATUS.md](STATUS.md) and [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
@@ -49,14 +49,19 @@ Requires [uv](https://docs.astral.sh/uv/) and Python 3.11+.
 ```bash
 uv venv --python 3.11 .venv
 uv pip install --python .venv -e ".[dev]"
-.venv/bin/pytest -q                       # 88 tests, green
+.venv/bin/pytest -q                        # 118 tests, green
 
-# run the pipeline (synthetic data by default — no real data needed)
+# the full pipeline (synthetic data by default — no real data needed)
 churnpilot init                            # write churn.yaml
 churnpilot validate                        # is the data usable? (fails gracefully)
 churnpilot profile                         # per-column EDA + a leakage hint
 churnpilot split --strategy time           # out-of-time split, leakage-guarded
 churnpilot train --model xgboost --train data/splits/train.parquet
+churnpilot compare --train data/splits/train.parquet --holdout data/splits/val.parquet
+churnpilot evaluate --model data/model.pkl --test data/splits/test.parquet --reference data/splits/train.parquet
+churnpilot simulate-policy --model data/model.pkl --data data/splits/test.parquet --budget 5000
+churnpilot report --eval data/eval-report.json --policy data/policy-report.json   # → data/report.html
+churnpilot monitor                         # per-feature drift + retrain verdict
 ```
 
 Materialize the synthetic dataset to a file with `churnpilot generate --out data/panel.parquet`,

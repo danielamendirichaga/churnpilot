@@ -22,17 +22,19 @@
 
 - **S11 (#11) — `charts` + `report` — DONE.** `charts.py` — one tested source of visuals (validated **clean-light** palette): gain/lift, calibration, per-segment lift, policy trade-off (each → PNG bytes). `report.py` `build_html` assembles a self-contained `report.html` (stat tiles + charts embedded base64) from the `eval-report`/`policy-report`/`model-card` artifacts. `report` CLI. Enriched `EvalReport` with a `gain` table. Verified: ruff + mypy clean, 111 tests green; smoke — 248 KB self-contained report, 4 charts; design signed off.
 
-- **S12 (#12) — `monitor` — DONE.** `monitor.py` `monitor_drift` — per-feature PSI earliest→latest cohort, `major`/`moderate`/`stable` status, retrain-recommended flag; graceful snapshot skip; emits `DriftReport` artifact. `monitor` CLI. Verified: ruff + mypy clean, 117 tests green; smoke — `watch_hours_30d` PSI 0.72 tops the list, 7 features flagged, stable features near-zero, retrain recommended (DS-leads).
+- **S12 (#12) — `monitor` — DONE.** `monitor.py` `monitor_drift` — per-feature PSI earliest→latest cohort, `major`/`moderate`/`stable` status, retrain-recommended flag; graceful snapshot skip; emits `DriftReport` artifact. `monitor` CLI. Verified: ruff + mypy clean, 117 tests green; smoke — `watch_hours_30d` PSI 0.72 tops the list, 7 features flagged, retrain recommended (DS-leads).
+- **S13 (#13) — agent wiring + package — DONE. 🎉 v1 COMPLETE.** Finalized `AGENTS.md` (full command map + agent-behavior/guardrails + full-pipeline recipe). Capstone `tests/test_pipeline.py` runs the whole pipeline (generate→…→monitor) + all 5 artifacts. `uv build` → wheel; verified clean `pip install` of the wheel in a fresh venv → `churnpilot version`/`init`/`validate` work. README quickstart extended to the full pipeline. 118 tests green.
 
 ## In progress
-- Nothing.
+- Nothing — **v1 shipped.**
 
 ## Active issue
-- **#13 — S13: agent wiring + package** (LAST v1 slice).
+- None. (v1 done; #1–#13 all closed.)
 
-## Next up
-1. Build **S13 (#13)** — finalize `AGENTS.md` guardrails/command-map for the full pipeline; verify `pip install .` (`uv build`) + `churnpilot --help`; behavioral checks; README quickstart end-to-end.
-2. That completes **v1**. Then v1.1: S14 Streamlit `dashboard`; v2: uplift/causal.
+## Next up (post-v1)
+1. **v1.1 — S14 Streamlit `dashboard`** (`churnpilot/app.py`): interactive policy-budget sliders over the same tested `charts.py`.
+2. **v2 — uplift/causal**: a simulated A/B-test hook in the generator + uplift models + Qini eval + uplift-based policy (the depth differentiator).
+3. *(Optional)* pre-public **history cleanup** (see standing constraints in memory).
 
 ## Key locked decisions (see docs/DESIGN_BRIEF.md for full detail)
 - Domain: streaming monthly subscription; target `churn_next_30d` (binary, next-cycle).

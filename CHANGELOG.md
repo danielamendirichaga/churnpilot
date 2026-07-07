@@ -103,3 +103,9 @@
 - `churnpilot/cli.py`: `monitor` command (per-feature drift table + retrain verdict).
 - `tests/test_monitor.py` (6): flags the drifting feature, stable feature not flagged, sorted by PSI, threshold controls retrain, snapshot graceful skip, artifact round-trip. Full suite 117 green; ruff + mypy clean.
 - Smoke: `watch_hours_30d` PSI 0.72 (major) tops the list; engagement features cascade; age/price/promo near-zero; 7 features → retrain recommended. (Closes #12)
+
+## 2026-07-07 — S13: agent wiring + package — v1 COMPLETE 🎉 (#13)
+- `AGENTS.md`: finalized for the full pipeline — accurate key-files map + command list, a "Full pipeline" command recipe, and an "Agent behavior" section (plan-once/run-with-checkpoints; flag leakage; warn on `random` split; propose-don't-decide on model/policy/retrain; synthetic≠real).
+- `tests/test_pipeline.py`: a capstone end-to-end test — generate → split → train → compare → evaluate → simulate-policy → report → monitor, asserting every stage emits its artifact (all 5 carry `parent_sha256` lineage) and the report renders.
+- Packaging: `uv build` → wheel + sdist; verified a clean `pip install` of the wheel in a fresh venv (`churnpilot version`/`init`/`validate` run). README quickstart extended through the full pipeline; status → v1 complete.
+- Full suite **118 green**; ruff + mypy clean. **v1 is done — issues #1–#13 all closed.** (Closes #13)
