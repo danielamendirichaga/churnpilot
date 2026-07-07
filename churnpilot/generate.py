@@ -30,6 +30,11 @@ DRIFT_FEATURE = "watch_hours_30d"
 COHORT_START = "2023-01"
 TARGET_CHURN_RATE = 0.10
 
+# v2 A/B-test simulation (only present when make_panel(treatment=True)).
+TREATMENT_COL = "treated"
+# Ground-truth columns — synthetic only, NEVER features (they encode the counterfactual).
+ORACLE_COLS = ("true_uplift", "churn_if_control", "churn_if_treated")
+
 PLANS = np.array(["Basic", "Standard", "Premium"])
 PLAN_PROBS = [0.50, 0.35, 0.15]
 PLAN_PRICE = {"Basic": 7, "Standard": 12, "Premium": 18}
@@ -56,9 +61,58 @@ def _keep_mask(churn_row: np.ndarray, counts: np.ndarray) -> np.ndarray:
     return within_before == 0
 
 
-def make_panel(n_subscribers: int = 8000, n_months: int = 24, seed: int = 42) -> pd.DataFrame:
-    """Build the synthetic streaming churn panel. Same ``(n_subscribers, n_months, seed)``
-    → identical frame."""
+def _uplift_tau(
+    rng: np.random.Generator,
+    promo_expiring: np.ndarray,
+    days_since: np.ndarray,
+    trend: np.ndarray,
+    support_tickets: np.ndarray,
+    payment_failures: np.ndarray,
+    total: int,
+) -> np.ndarray:
+    """Heterogeneous treatment effect τ(x) — the offer's reduction in churn probability.
+
+    Built from a *different* signal than the churn hazard, so customers at the **same risk**
+    split into distinct uplift quadrants:
+
+    * **persuadable** (τ large +): an expiring promo the offer can extend + mild, reversible
+      disengagement → the offer genuinely rescues them;
+    * **sleeping dog** (τ negative): billing/support friction → contacting them backfires
+      (the "we miss you" note reminds them to cancel);
+    * **lost cause** (τ ≈ 0): already gone (very high ``days_since``) → the offer is futile;
+    * **sure thing** (τ ≈ 0): nothing pushing them out, nothing to rescue.
+
+    ``tanh`` bounds τ to (−0.15, 0.15) churn-probability points; both signs occur by design.
+    """
+    persuade = (
+        0.9 * promo_expiring.astype(float)  # biggest lever: extend an about-to-expire promo
+        + 0.015 * np.clip(days_since, 0, 20)  # mildly disengaged = winnable
+        + 0.02 * np.clip(-trend, 0.0, None)  # a reversible slide in watch time
+    )
+    backfire = (
+        0.10 * support_tickets  # already annoyed
+        + 0.35 * payment_failures  # billing friction → contact backfires
+        + 0.02 * np.clip(days_since - 25, 0, 5)  # too far gone → futile / irritating
+    )
+    raw = persuade - backfire + rng.normal(0.0, 0.1, total)
+    return 0.15 * np.tanh(raw)
+
+
+def make_panel(
+    n_subscribers: int = 8000,
+    n_months: int = 24,
+    seed: int = 42,
+    treatment: bool = False,
+) -> pd.DataFrame:
+    """Build the synthetic streaming churn panel. Same ``(n_subscribers, n_months, seed,
+    treatment)`` → identical frame.
+
+    With ``treatment=True`` (v2), overlay a **randomized A/B test**: a ``treated`` coin
+    (~50/50, independent of features → a clean experiment), a heterogeneous uplift ``τ(x)``
+    (see :func:`_uplift_tau`), and monotone-coupled potential outcomes so the observed
+    ``churn_next_30d`` is the *factual* outcome under the assigned arm. Adds oracle columns
+    (``true_uplift`` and both counterfactual outcomes) for honest Qini — never features.
+    Default ``False`` leaves the v1 frame byte-for-byte unchanged."""
     rng = np.random.default_rng(seed)
     n = n_subscribers
 
@@ -141,8 +195,22 @@ def make_panel(n_subscribers: int = 8000, n_months: int = 24, seed: int = 42) ->
             lo = mid
     intercept = 0.5 * (lo + hi)
 
-    churn_row = (churn_u < _sigmoid(intercept + base_logit)).astype(np.int64)
-    keep = _keep_mask(churn_row.astype(bool), counts)
+    p0 = _sigmoid(intercept + base_logit)  # churn prob under control
+    if treatment:
+        tau = _uplift_tau(
+            rng, promo_expiring, days_since, trend, support_tickets, payment_failures, total
+        )
+        p1 = np.clip(p0 - tau, 0.0, 1.0)  # under treatment (τ>0 lowers churn; τ<0 raises it)
+        treated = rng.random(total) < 0.5  # randomized, feature-independent
+        # Monotone coupling: one uniform per row → clean individual-level effects.
+        y0 = churn_u < p0
+        y1 = churn_u < p1
+        churn_bool = np.where(treated, y1, y0)  # observe only the factual arm
+        true_uplift = p0 - p1  # retention uplift = churn-prob reduction
+    else:
+        churn_bool = churn_u < p0
+    churn_row = churn_bool.astype(np.int64)
+    keep = _keep_mask(churn_bool, counts)
 
     # --- assemble kept rows --------------------------------------------------
     base = pd.Period(COHORT_START, freq="M")
@@ -166,36 +234,40 @@ def make_panel(n_subscribers: int = 8000, n_months: int = 24, seed: int = 42) ->
     expected_life = np.clip(np.round(6.0 + 0.7 * engagement), 3, 48)[sub]
     cltv = (monthly_price[sub] * expected_life).astype(np.int64)
 
-    df = pd.DataFrame(
-        {
-            "subscriber_id": (sub + 1).astype(np.int64),
-            "observation_month": observation_month,
-            "signup_month": signup_month,
-            "tenure_months": tenure.astype(np.int64),
-            "plan_tier": plan[sub],
-            "monthly_price": monthly_price[sub],
-            "payment_method": payment[sub],
-            "on_promo": promo_left > 0,
-            "promo_months_left": promo_left.astype(np.int64),
-            "household_profiles": household[sub].astype(np.int64),
-            "watch_hours_30d": watch_col.round(2),
-            "active_days_30d": active_days,
-            "days_since_last_watch": days_since,
-            "watch_hours_trend": trend.round(2),
-            "titles_started_30d": titles_started,
-            "titles_completed_30d": titles_completed,
-            "avg_session_minutes": avg_session_col.round(1),
-            "support_tickets_30d": support_tickets,
-            "payment_failures_30d": payment_failures,
-            "age": age,
-            "region": region[sub],
-            "signup_device": device[sub],
-            "cancel_flow_visits_30d": cancel_visits,
-            "cltv": cltv,
-            TARGET: churn_row,
-        }
-    ).loc[keep]
+    data = {
+        "subscriber_id": (sub + 1).astype(np.int64),
+        "observation_month": observation_month,
+        "signup_month": signup_month,
+        "tenure_months": tenure.astype(np.int64),
+        "plan_tier": plan[sub],
+        "monthly_price": monthly_price[sub],
+        "payment_method": payment[sub],
+        "on_promo": promo_left > 0,
+        "promo_months_left": promo_left.astype(np.int64),
+        "household_profiles": household[sub].astype(np.int64),
+        "watch_hours_30d": watch_col.round(2),
+        "active_days_30d": active_days,
+        "days_since_last_watch": days_since,
+        "watch_hours_trend": trend.round(2),
+        "titles_started_30d": titles_started,
+        "titles_completed_30d": titles_completed,
+        "avg_session_minutes": avg_session_col.round(1),
+        "support_tickets_30d": support_tickets,
+        "payment_failures_30d": payment_failures,
+        "age": age,
+        "region": region[sub],
+        "signup_device": device[sub],
+        "cancel_flow_visits_30d": cancel_visits,
+        "cltv": cltv,
+        TARGET: churn_row,
+    }
+    if treatment:
+        data[TREATMENT_COL] = treated.astype(np.int64)
+        data["true_uplift"] = true_uplift.round(4)
+        data["churn_if_control"] = y0.astype(np.int64)
+        data["churn_if_treated"] = y1.astype(np.int64)
 
+    df = pd.DataFrame(data).loc[keep]
     return df.sort_values(["subscriber_id", "observation_month"]).reset_index(drop=True)
 
 
@@ -204,14 +276,22 @@ def summarize(df: pd.DataFrame) -> str:
     first = df["observation_month"].min()
     last = df["observation_month"].max()
     null_rates = {c: round(float(df[c].isna().mean()), 4) for c in df.columns if df[c].isna().any()}
-    return "\n".join(
-        [
-            f"rows            : {len(df):,}",
-            f"subscribers     : {df['subscriber_id'].nunique():,}",
-            f"cohorts         : {df['observation_month'].nunique()} months "
-            f"({first:%Y-%m} → {last:%Y-%m})",
-            f"churn rate      : {df[TARGET].mean():.4f} ({TARGET})",
-            f"null rates      : {null_rates if null_rates else '{}'}",
-            f"drift feature   : {DRIFT_FEATURE} (mean declines across cohorts)",
+    lines = [
+        f"rows            : {len(df):,}",
+        f"subscribers     : {df['subscriber_id'].nunique():,}",
+        f"cohorts         : {df['observation_month'].nunique()} months "
+        f"({first:%Y-%m} → {last:%Y-%m})",
+        f"churn rate      : {df[TARGET].mean():.4f} ({TARGET})",
+        f"null rates      : {null_rates if null_rates else '{}'}",
+        f"drift feature   : {DRIFT_FEATURE} (mean declines across cohorts)",
+    ]
+    if TREATMENT_COL in df.columns:
+        treat_rate = df[TREATMENT_COL].mean()
+        ate = float(df["churn_if_control"].mean() - df["churn_if_treated"].mean())
+        sleeping = float((df["true_uplift"] < -0.01).mean())
+        lines += [
+            f"treated share   : {treat_rate:.3f} (randomized A/B)",
+            f"avg true uplift : {ate:+.4f} churn-prob reduction (ATE)",
+            f"sleeping dogs   : {sleeping:.1%} of rows have negative uplift",
         ]
-    )
+    return "\n".join(lines)

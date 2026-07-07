@@ -25,15 +25,21 @@
 - **S12 (#12) — `monitor` — DONE.** `monitor.py` `monitor_drift` — per-feature PSI earliest→latest cohort, `major`/`moderate`/`stable` status, retrain-recommended flag; graceful snapshot skip; emits `DriftReport` artifact. `monitor` CLI. Verified: ruff + mypy clean, 117 tests green; smoke — `watch_hours_30d` PSI 0.72 tops the list, 7 features flagged, retrain recommended (DS-leads).
 - **S13 (#13) — agent wiring + package — DONE. 🎉 v1 COMPLETE.** Finalized `AGENTS.md` (full command map + agent-behavior/guardrails + full-pipeline recipe). Capstone `tests/test_pipeline.py` runs the whole pipeline (generate→…→monitor) + all 5 artifacts. `uv build` → wheel; verified clean `pip install` of the wheel in a fresh venv → `churnpilot version`/`init`/`validate` work. README quickstart extended to the full pipeline. 118 tests green.
 
+### v2 — uplift / causal
+- **S14 (#14) — generator treatment simulation — DONE.** `make_panel(treatment=True)` overlays a randomized A/B test: balanced `treated`, heterogeneous `τ(x)` (`_uplift_tau`) spanning all 4 quadrants incl. sleeping dogs (τ<0), monotone-coupled potential outcomes → observed churn = factual; oracle cols (`true_uplift`/counterfactuals) for honest Qini. `feature_columns` guards oracle+`treated` from leaking. `generate --treatment` CLI. Verified: ruff + mypy clean, 126 tests green (v1 untouched); smoke 8k×24 → treated 0.498, ATE +0.037, 8% sleeping dogs.
+
 ## In progress
 - Nothing — **v1 shipped.**
 
 ## Active track
-- **v2 — uplift / causal (PLANNING).** Owner dropped v1.1 (Streamlit dashboard) in favor of the causal-inference differentiator. Grilling the v2 design before building.
+- **v2 — uplift / causal (BUILDING).** Design **accepted** (`docs/v2-design-brief.md`); issues **#14–#18** created (`v2-slice`). v1.1 dashboard deferred.
+
+## Active issue
+- **#15 — S15: uplift models (S-/T-learner)** (next to build).
 
 ## Next up (v2)
-1. **Grill the v2 design** → PRD/slices: (a) treatment simulation in the generator, (b) uplift learners, (c) Qini/uplift eval, (d) uplift-based policy + risk-vs-uplift contrast, (e) scope boundary (seasonality? real A/B data?).
-2. Build verified slices per that plan. Consult course causal material as reference (reimplemented, uncited).
+1. **S15 (#15)** — `uplift.py`: S-learner + T-learner over `model.py` (default logistic); `UpliftCard`; `train-uplift` CLI. Consult course causal material as reference (reimplemented, uncited).
+2. Then S16 Qini eval → S17 uplift policy + contrast → S18 report + docs.
 3. *(Optional)* pre-public **history cleanup** (see standing constraints in memory).
 
 ## Deferred

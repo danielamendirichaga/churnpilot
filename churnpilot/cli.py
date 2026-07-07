@@ -63,11 +63,14 @@ def generate(
     subscribers: int = typer.Option(8000, "--subscribers", help="Number of subscribers."),
     months: int = typer.Option(24, "--months", help="Number of monthly cohorts."),
     seed: int = typer.Option(42, "--seed", help="RNG seed (deterministic)."),
+    treatment: bool = typer.Option(
+        False, "--treatment", help="Overlay a randomized A/B test (adds uplift columns, for v2)."
+    ),
 ) -> None:
     """Generate the deterministic synthetic streaming churn panel (no real data)."""
     from .generate import make_panel, summarize
 
-    df = make_panel(n_subscribers=subscribers, n_months=months, seed=seed)
+    df = make_panel(n_subscribers=subscribers, n_months=months, seed=seed, treatment=treatment)
     out.parent.mkdir(parents=True, exist_ok=True)
     df.to_parquet(out, index=False)
     typer.echo(f"Wrote {out}")

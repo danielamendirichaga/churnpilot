@@ -109,3 +109,10 @@
 - `tests/test_pipeline.py`: a capstone end-to-end test — generate → split → train → compare → evaluate → simulate-policy → report → monitor, asserting every stage emits its artifact (all 5 carry `parent_sha256` lineage) and the report renders.
 - Packaging: `uv build` → wheel + sdist; verified a clean `pip install` of the wheel in a fresh venv (`churnpilot version`/`init`/`validate` run). README quickstart extended through the full pipeline; status → v1 complete.
 - Full suite **118 green**; ruff + mypy clean. **v1 is done — issues #1–#13 all closed.** (Closes #13)
+
+## 2026-07-07 — S14: generator treatment simulation (v2 · #14)
+- `churnpilot/generate.py`: `make_panel(treatment=True)` overlays a **randomized A/B test** — a balanced, feature-independent `treated` coin; a heterogeneous uplift `τ(x)` (`_uplift_tau`) built from a *different* signal than the churn hazard, so the same risk level splits into persuadable / sleeping-dog / lost-cause / sure-thing; monotone-coupled potential outcomes so observed `churn_next_30d` is the factual arm. Adds oracle columns (`true_uplift`, `churn_if_control`, `churn_if_treated`) for honest Qini — synthetic ground truth, never features. `summarize()` reports treated share / ATE / sleeping-dog rate. Default `treatment=False` leaves the v1 frame byte-for-byte identical.
+- `churnpilot/model.py`: `feature_columns` now filters the oracle columns and `treated` from features (the S-learner re-adds `treated` explicitly where it needs it).
+- `churnpilot/cli.py`: `generate --treatment` flag.
+- `tests/test_treatment.py` (8): v1 frame unchanged when off; balanced feature-independent randomization; heterogeneous τ with sleeping dogs; uplift ≠ risk (both signs among would-be churners); observed = factual arm; ATE ≈ mean(true_uplift) and > 0; oracle/treated excluded from features. Full suite **126 green**; ruff + mypy clean.
+- Smoke: 8k×24 `--treatment` → treated 0.498, ATE +0.037 churn reduction, 8% sleeping dogs. (Closes #14)

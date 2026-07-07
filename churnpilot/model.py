@@ -28,6 +28,7 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from . import metrics as m
 from .artifacts import ArtifactBase, content_hash
 from .config import ChurnConfig
+from .generate import ORACLE_COLS, TREATMENT_COL
 
 MODELS = ("logistic", "tree", "rf", "xgboost")
 _HP_KEYS = {
@@ -64,6 +65,10 @@ def feature_columns(df: pd.DataFrame, config: ChurnConfig) -> tuple[list[str], l
         if cols.features == "auto"
         else list(cols.features)
     )
+    # Synthetic ground-truth + the A/B treatment indicator are never customer features
+    # (the uplift S-learner adds `treated` back explicitly where it needs it).
+    never = {*ORACLE_COLS, TREATMENT_COL}
+    feats = [c for c in feats if c not in never]
     numeric = [
         c
         for c in feats
