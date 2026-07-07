@@ -17,3 +17,9 @@
 - Produced `docs/context.md` (background/constraints/non-goals), `docs/ADRs.md` (10 architecture decision records), and `docs/PRD.md`.
 - PRD structured in the three layers (ML engine / contract / agent behavior) with functional requirements, 12 user stories + acceptance criteria (tagged by test layer), and a 13-slice v1 build plan with requirement→slice traceability.
 - Next: `/to-issue` (one issue per slice) → build S1 (config + init).
+
+## 2026-07-07 — S1: config + init (#1)
+- `churnpilot/config.py`: Pydantic `churn.yaml` schema (`ChurnConfig` / `SourceConfig` / `ColumnMap`, `extra="forbid"`), `load_config` raising a readable `ConfigError`, and the `CONFIG_TEMPLATE`.
+- `churnpilot/cli.py`: `init` command scaffolds `churn.yaml` (won't overwrite without `--force`).
+- Added deps `pydantic`, `types-PyYAML`; added `[tool.mypy]` (python 3.11 + pydantic plugin).
+- `tests/test_config.py`: 12 tests (valid/default/error paths + `init` round-trip). Full suite 14 green; ruff + mypy clean. (Closes #1)

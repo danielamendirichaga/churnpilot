@@ -5,14 +5,18 @@
 - Private GitHub repo `danielamendirichaga/churnpilot` created + pushed (main tracks origin/main).
 - **Planning — grilling complete.** Full design pressure-tested against prior work + established practice (`local-notes/`). All decisions in **`docs/DESIGN_BRIEF.md`**.
 - **Planning — PRD complete.** `docs/context.md`, `docs/ADRs.md` (10 ADRs), `docs/PRD.md` (3 layers, 12 user stories, functional requirements, 13-slice v1 breakdown with traceability).
+- **GitHub issues #1–#13 created** (one per slice S1–S13, label `v1-slice`).
+- **S1 (#1) — Config + `init` — DONE.** `churn.yaml` Pydantic schema (`ChurnConfig`/`SourceConfig`/`ColumnMap`), `load_config` (graceful `ConfigError`), `init` command + template. Added `pydantic`/`types-PyYAML` deps + `[tool.mypy]` (pydantic plugin). Verified: ruff + mypy clean, 14 tests green, `churnpilot init` round-trips.
 
 ## In progress
-- Nothing — ready to slice the PRD into issues.
+- Nothing.
+
+## Active issue
+- **#2 — S2: `generate`** (next to build).
 
 ## Next up
-1. `/to-issue` — one GitHub issue per slice (S1–S13) from `docs/PRD.md` §7.
-2. Build **S1: Config + `init`** (churn.yaml Pydantic schema + loader + template scaffold).
-3. Then S2 `generate`, S3 `source`+`validate`, … per the slice breakdown.
+1. Build **S2 (#2): `generate`** — seeded synthetic Netflix-style panel (feature schema + 4 levers + cltv + leakage trap) + determinism test.
+2. Then S3 `source`+`validate` (#3), S4 `profile` (#4), … per `docs/PRD.md` §7.
 
 ## Key locked decisions (see docs/DESIGN_BRIEF.md for full detail)
 - Domain: streaming monthly subscription; target `churn_next_30d` (binary, next-cycle).

@@ -21,6 +21,7 @@ dependencies = [
     "numpy>=1.26",
     "pyarrow>=15.0",
     "pyyaml>=6.0",
+    "pydantic>=2.6",
     "scikit-learn>=1.4",
     "matplotlib>=3.8",
     "plotly>=5.20",
@@ -32,6 +33,7 @@ dev = [
     "pytest>=8.0",
     "ruff>=0.4",
     "mypy>=1.8",
+    "types-PyYAML>=6.0",
 ]
 
 [project.scripts]
@@ -46,3 +48,7 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+[tool.mypy]
+python_version = "3.11"
+plugins = ["pydantic.mypy"]
