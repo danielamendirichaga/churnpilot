@@ -33,4 +33,4 @@
 
 ## Build order (✅ = done)
 ✅ config+init+generate → ✅ validate → ✅ profile → ✅ metrics → ✅ split → ✅ train →
-✅ compare → ✅ evaluate → ✅ simulate-policy → ✅ report → monitor → package → dashboard (v1.1).
+✅ compare → ✅ evaluate → ✅ simulate-policy → ✅ report → ✅ monitor → package → dashboard (v1.1).

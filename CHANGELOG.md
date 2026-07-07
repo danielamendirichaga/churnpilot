@@ -97,3 +97,9 @@
 - `churnpilot/evaluate.py`: enriched `EvalReport` with a `gain` table (so the report can draw the gain curve).
 - `tests/test_report.py` (5): charts return valid PNG, report is self-contained (base64, no http links), figure counts, KS/ECE fallback without policy, end-to-end from real artifacts. Full suite 111 green; ruff + mypy clean.
 - Design signed off (clean-light) via a preview artifact; smoke: 248 KB report.html with 4 charts. (Closes #11)
+
+## 2026-07-07 — S12: monitor (#12)
+- `churnpilot/monitor.py`: `monitor_drift()` computes per-numeric-feature PSI (earliest cohort → latest), grades each `stable`/`moderate`/`major`, lists drifted features past the threshold, and recommends a retrain if any drift — never auto-retrains (DS-leads). Skips gracefully in snapshot mode (no `date_col`). Emits a `DriftReport` artifact with lineage. Reuses `metrics.psi`.
+- `churnpilot/cli.py`: `monitor` command (per-feature drift table + retrain verdict).
+- `tests/test_monitor.py` (6): flags the drifting feature, stable feature not flagged, sorted by PSI, threshold controls retrain, snapshot graceful skip, artifact round-trip. Full suite 117 green; ruff + mypy clean.
+- Smoke: `watch_hours_30d` PSI 0.72 (major) tops the list; engagement features cascade; age/price/promo near-zero; 7 features → retrain recommended. (Closes #12)

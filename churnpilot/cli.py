@@ -548,5 +548,46 @@ def report(
     typer.echo(f"Wrote {out}  ({len(html):,} bytes) — open it in a browser.")
 
 
+@app.command()
+def monitor(
+    config: Path = typer.Option(
+        Path("churn.yaml"), "--config", help="Path to the churn.yaml config."
+    ),
+    threshold: float = typer.Option(0.25, "--threshold", help="PSI drift threshold for retrain."),
+    report_out: Path = typer.Option(
+        Path("data/drift-report.json"), "--report-out", help="Where to write the drift-report."
+    ),
+) -> None:
+    """Monitor per-feature drift across cohorts and recommend a retrain (never auto-retrains)."""
+    from .monitor import monitor_drift
+
+    cfg, df = _load(config)
+    report = monitor_drift(df, cfg, threshold=threshold)
+    report_out.parent.mkdir(parents=True, exist_ok=True)
+    report.write_json(report_out)
+
+    if report.skipped:
+        typer.echo("Drift monitoring unavailable — no usable date_col (snapshot mode).")
+        return
+
+    _sym = {"stable": "✔", "moderate": "⚠", "major": "✗"}
+    typer.echo(
+        f"Drift monitor  (reference {report.reference} → latest {report.latest}, "
+        f"threshold {report.threshold:g})  → {report_out}"
+    )
+    typer.echo("")
+    for r in report.features:
+        typer.echo(f"  {_sym[r['status']]} {r['feature']:<24} PSI {r['psi']:.4f}  ({r['status']})")
+    typer.echo("")
+    if report.retrain_recommended:
+        typer.echo(
+            f"  ⚠ RETRAIN RECOMMENDED — {len(report.drifted)} feature(s) drifted past "
+            f"{report.threshold:g}: {', '.join(report.drifted)}"
+        )
+        typer.echo("  (churnpilot proposes; the DS decides — it never auto-retrains)")
+    else:
+        typer.echo("  ✔ no significant drift — no retrain needed")
+
+
 if __name__ == "__main__":  # pragma: no cover
     app()

@@ -22,15 +22,17 @@
 
 - **S11 (#11) — `charts` + `report` — DONE.** `charts.py` — one tested source of visuals (validated **clean-light** palette): gain/lift, calibration, per-segment lift, policy trade-off (each → PNG bytes). `report.py` `build_html` assembles a self-contained `report.html` (stat tiles + charts embedded base64) from the `eval-report`/`policy-report`/`model-card` artifacts. `report` CLI. Enriched `EvalReport` with a `gain` table. Verified: ruff + mypy clean, 111 tests green; smoke — 248 KB self-contained report, 4 charts; design signed off.
 
+- **S12 (#12) — `monitor` — DONE.** `monitor.py` `monitor_drift` — per-feature PSI earliest→latest cohort, `major`/`moderate`/`stable` status, retrain-recommended flag; graceful snapshot skip; emits `DriftReport` artifact. `monitor` CLI. Verified: ruff + mypy clean, 117 tests green; smoke — `watch_hours_30d` PSI 0.72 tops the list, 7 features flagged, stable features near-zero, retrain recommended (DS-leads).
+
 ## In progress
 - Nothing.
 
 ## Active issue
-- **#12 — S12: `monitor`** (next to build).
+- **#13 — S13: agent wiring + package** (LAST v1 slice).
 
 ## Next up
-1. Build **S12 (#12): `monitor`** — per-feature PSI across cohorts vs a reference; raise a retrain flag when drift crosses a threshold; graceful skip if no `date_col`; emit `drift-report` artifact.
-2. Then S13 (#13) agent wiring (finalize `AGENTS.md` guardrails/command-map) + package (`pip install .` + README quickstart). Then v1.1: S14 Streamlit `dashboard`.
+1. Build **S13 (#13)** — finalize `AGENTS.md` guardrails/command-map for the full pipeline; verify `pip install .` (`uv build`) + `churnpilot --help`; behavioral checks; README quickstart end-to-end.
+2. That completes **v1**. Then v1.1: S14 Streamlit `dashboard`; v2: uplift/causal.
 
 ## Key locked decisions (see docs/DESIGN_BRIEF.md for full detail)
 - Domain: streaming monthly subscription; target `churn_next_30d` (binary, next-cycle).
