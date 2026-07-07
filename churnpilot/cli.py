@@ -238,5 +238,57 @@ def split(
         )
 
 
+@app.command()
+def train(
+    train: Path = typer.Option(..., "--train", help="Training parquet (a split output)."),
+    model: str = typer.Option("logistic", "--model", help="logistic | tree | rf | xgboost."),
+    config: Path = typer.Option(
+        Path("churn.yaml"), "--config", help="Path to the churn.yaml config."
+    ),
+    model_out: Path = typer.Option(
+        Path("data/model.pkl"), "--model-out", help="Where to persist the fitted model."
+    ),
+    smote: bool = typer.Option(False, "--smote", help="Oversample the minority class (SMOTE)."),
+    calibrate: bool = typer.Option(False, "--calibrate", help="Isotonic probability calibration."),
+    tune: bool = typer.Option(False, "--tune", help="Run the hyperparameter search."),
+    seed: int = typer.Option(42, "--seed", help="RNG seed."),
+) -> None:
+    """Fit a model from the menu (leakage-safe) and report it against the baseline floor."""
+    import pandas as pd
+
+    from .config import ConfigError, load_config
+    from .model import ModelError, save_model, train_model
+
+    try:
+        cfg = load_config(config)
+    except ConfigError as exc:
+        typer.echo(str(exc))
+        raise typer.Exit(code=1) from exc
+    df = pd.read_parquet(train)
+    try:
+        estimator, card = train_model(
+            df, cfg, model=model, smote=smote, calibrate=calibrate, tune=tune, seed=seed
+        )
+    except ModelError as exc:
+        typer.echo(str(exc))
+        raise typer.Exit(code=1) from exc
+
+    model_out.parent.mkdir(parents=True, exist_ok=True)
+    save_model(estimator, model_out)
+    card.write_json(model_out.with_suffix(".card.json"))
+
+    tags = "".join(
+        t for t, on in ((" +smote", smote), (" +calibrated", calibrate), (" +tuned", tune)) if on
+    )
+    tm, bm = card.train_metrics, card.baseline_metrics
+    typer.echo(
+        f"Trained {model}{tags} on {len(df):,} rows ({card.n_features} features) → {model_out}"
+    )
+    typer.echo(
+        f"  train : AUC {tm['auc']:.4f} | KS {tm['ks']:.4f} | top-decile lift {tm['top_decile_lift']:.2f}x"
+    )
+    typer.echo(f"  floor : AUC {bm['auc']:.4f}  (majority-class baseline to beat)")
+
+
 if __name__ == "__main__":  # pragma: no cover
     app()

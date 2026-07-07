@@ -51,3 +51,9 @@
 - `churnpilot/split.py`: `split_dataset()` with `time` (out-of-time, default) / `grouped` (disjoint subscribers) / `random` (row-wise) strategies; a leakage guard (row-disjoint, time-ordered, subscriber-overlap) that warns on random-split entity leakage; emits a `SplitManifest` artifact.
 - `churnpilot/cli.py`: `split` command (writes train/val/test parquets + `split-manifest.json`; reports the leakage verdict).
 - `tests/test_split.py` (9): time-ordering, grouped disjointness, random entity-leakage warning, ratios, snapshot+time error, manifest lineage + JSON round-trip, determinism. Full suite 71 green; ruff + mypy clean. Smoke: time ✔ (1,334 legit overlap) vs random ⚠ (4,822 leaked). (Closes #6)
+
+## 2026-07-07 — S7: train (the model menu) (#7)
+- `churnpilot/model.py`: `train_model()` over the menu (logistic L1 / pruned tree / rf / xgboost) in a leakage-safe `ColumnTransformer` pipeline fit on train only; optional SMOTE (`imblearn` ImbPipeline) + isotonic `CalibratedClassifierCV`; always-on `DummyClassifier` floor; `--tune` = the course's `LogisticRegressionCV` / ccp pruning / XGBoost `GridSearchCV`. Emits `ModelCard`; `save_model`/`load_model` (joblib). Mirrors the ML-course notebook stack.
+- `churnpilot/cli.py`: `train` command (menu + `--smote`/`--calibrate`/`--tune`; writes model.pkl + model-card).
+- Deps: `xgboost`, `imbalanced-learn`, `joblib` (+ macOS `libomp` via brew). Migrated logistic to sklearn 1.9's `l1_ratio` API (no deprecation warnings).
+- `tests/test_model.py` (12): each model fits + beats floor, baseline=0.5, SMOTE/calibrate paths, tune paths (ccp + grid), model-card lineage + round-trip, save/load. Full suite 83 green; ruff + mypy clean. Smoke: xgboost 0.81 AUC (clean) vs 0.9999 (auto/leaky). (Closes #7)
