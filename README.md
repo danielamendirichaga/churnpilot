@@ -8,10 +8,11 @@ Point it at a customer table (via one `churn.yaml`) and an AI agent drives a rep
 pipeline to predict who will churn, decide who to save under a budget, and watch for drift —
 proposing and explaining every step while the data scientist stays in charge.
 
-> **Status: v1 complete.** The full pipeline — *generate → validate → profile → metrics →
-> split → train → compare → evaluate → simulate-policy → report → monitor* — is built and
-> tested (118 passing tests). Next: an interactive Streamlit dashboard (v1.1) and uplift/causal
-> modeling (v2). See [STATUS.md](STATUS.md) and [CHANGELOG.md](CHANGELOG.md).
+> **Status: v1 + v2 complete.** The full pipeline — *generate → validate → profile → metrics →
+> split → train → compare → evaluate → simulate-policy → report → monitor* — plus a v2
+> **uplift/causal** layer (*A/B simulation → uplift models → Qini → risk-vs-uplift policy*), all
+> built and tested (147 passing tests). Deferred: an interactive Streamlit dashboard (v1.1).
+> See [STATUS.md](STATUS.md) and [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
@@ -81,17 +82,49 @@ then point `churn.yaml` at your own data (`source: {kind: file, path: ...}` — 
 - **A model menu** — L1 logistic, pruned decision tree, random forest, XGBoost — in a
   leakage-safe pipeline (fit on train only), with an always-on baseline floor and optional
   SMOTE, isotonic calibration, and (mode-aware) early stopping.
-- **Typed artifacts** — `split-manifest`, `model-card` — Pydantic-validated with content-hash
-  (`parent_sha256`) lineage.
+- **Typed artifacts** — `split-manifest`, `model-card`, `eval-report`, `policy-report`,
+  `drift-report`, `uplift-card`, `qini-report`, `policy-contrast` — Pydantic-validated with
+  content-hash (`parent_sha256`) lineage.
 - **Config-driven** — works on any churn dataset, panel *or* single-snapshot, from one
   `churn.yaml`; drift/time features degrade gracefully when there's no date column.
+- **Uplift / causal targeting (v2)** — a simulated A/B test, S-/T-learner meta-models, Qini
+  evaluation, and a policy that targets *persuadables* over the highest-risk (see below).
+
+---
+
+## Uplift / causal — target persuadables, not just high risk (v2)
+
+v1 ranks customers by **risk** (who will churn). v2 ranks by **uplift** — the *causal effect of
+the offer* — because those are different people. A high-risk **lost cause** churns no matter what;
+a **sleeping dog** churns *because* you contacted them (negative uplift). Only an uplift model can
+tell a persuadable from either.
+
+churnpilot simulates a randomized A/B test (`generate --treatment`), fits **S-/T-learner**
+meta-models over the same tested pipeline, evaluates them with a **Qini curve**, then runs a
+**risk-vs-uplift policy contrast** scored on the *true* counterfactual — honest because the
+synthetic generator knows both potential outcomes:
+
+```bash
+churnpilot generate --treatment --out data/ab.parquet          # a randomized A/B panel
+churnpilot train-uplift --data data/ab.parquet --learner t --model-out data/uplift.pkl
+churnpilot uplift-eval  --model data/uplift.pkl --data data/ab.parquet   # Qini + decile lift
+churnpilot train        --model logistic --train data/ab.parquet --model-out data/risk.pkl
+churnpilot policy-contrast --model data/risk.pkl --uplift-model data/uplift.pkl \
+    --data data/ab.parquet --n-offers 3000 --offer-cost 3
+```
+
+On synthetic ground truth, at equal budget, **targeting by uplift retains ~66% more true value
+and treats ~8× fewer sleeping dogs** than targeting by risk. The T-learner also recovers the
+planted effect far better than the S-learner (corr ≈ 0.40 vs 0.14) — the classic meta-learner
+result. Original, clean-room work built from standard causal-ML (meta-learners + Qini).
 
 ---
 
 ## Docs
 
 - **[WORKFLOW.md](WORKFLOW.md)** — the build process (plan → slice → verify → commit).
-- **[docs/DESIGN_BRIEF.md](docs/DESIGN_BRIEF.md)** — every design decision.
+- **[docs/DESIGN_BRIEF.md](docs/DESIGN_BRIEF.md)** — every v1 design decision.
+- **[docs/v2-design-brief.md](docs/v2-design-brief.md)** — the uplift/causal (v2) design.
 - **[docs/PRD.md](docs/PRD.md)** — requirements + the 13-slice build plan.
 - **[docs/ADRs.md](docs/ADRs.md)** — architecture decision records.
 - **[docs/synthetic-data.md](docs/synthetic-data.md)** — the synthetic dataset spec.

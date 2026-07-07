@@ -144,3 +144,49 @@ def segment_lift_chart(segment: dict, label: str = "segment") -> bytes:
     ax.set_ylim(0, max(lifts) * 1.25 if lifts else 1)
     _title(ax, f"Top-decile lift by {label}")
     return _png(fig)
+
+
+def qini_curve_chart(curve: list[dict]) -> bytes:
+    """Cumulative incremental retentions vs. customers targeted by predicted uplift + random."""
+    x = [p["frac"] for p in curve]
+    q = [p["qini"] for p in curve]
+    rand = [p["random"] for p in curve]
+    fig, ax = _ax()
+    ax.plot(x, rand, color=MUTED, linewidth=1.5, linestyle="--", label="random")
+    ax.plot(x, q, color=BLUE, linewidth=2.5, label="uplift model")
+    ax.set_xlabel("fraction of customers targeted (by predicted uplift)", color=INK2, fontsize=10)
+    ax.set_ylabel("cumulative incremental retentions", color=INK2, fontsize=10)
+    ax.set_xlim(0, 1)
+    ax.xaxis.set_major_formatter(lambda v, _p: f"{v:.0%}")
+    ax.yaxis.set_major_formatter(lambda v, _p: f"{v:,.0f}")
+    _title(ax, "Qini — incremental retentions vs. targeting")
+    ax.legend(frameon=False, fontsize=9, labelcolor=INK2, loc="upper left")
+    return _png(fig)
+
+
+def uplift_vs_risk_chart(strategies: dict) -> bytes:
+    """True net value from targeting by risk vs. by uplift at one budget (the v2 money chart)."""
+    labels = ["target by risk", "target by uplift"]
+    nets = [strategies["risk"]["true_net_value"], strategies["uplift"]["true_net_value"]]
+    dogs = [
+        strategies["risk"]["sleeping_dogs_treated"],
+        strategies["uplift"]["sleeping_dogs_treated"],
+    ]
+    fig, ax = _ax(figsize=(6.6, 3.8))
+    bars = ax.bar(labels, nets, color=[MUTED, BLUE], width=0.55)
+    for b, v, sd in zip(bars, nets, dogs):
+        ax.annotate(
+            f"${v:,.0f}\n{sd:,} sleeping dogs",
+            (b.get_x() + b.get_width() / 2, v),
+            textcoords="offset points",
+            xytext=(0, 5),
+            ha="center",
+            color=INK,
+            fontsize=9,
+            fontweight="bold",
+        )
+    _dollars(ax)
+    ax.set_ylabel("true net value", color=INK2, fontsize=10)
+    ax.set_ylim(0, max(nets) * 1.25 if nets else 1)
+    _title(ax, "Retention value — risk vs. uplift (equal budget)")
+    return _png(fig)

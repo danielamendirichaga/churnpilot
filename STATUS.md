@@ -30,6 +30,7 @@
 - **S15 (#15) — uplift models — DONE.** `uplift.py`: S-learner (treated as feature) + T-learner (two models) over `model.py`; `predict_uplift` = churn-prob reduction; `UpliftCard` (+ τ-recovery corr vs synthetic truth); `train-uplift` CLI + joblib persist. Verified: ruff + mypy clean, 133 tests green; smoke 66k rows → **T-learner recovery corr +0.40 vs S-learner +0.14** (both match ATE; T-learner captures heterogeneity, S-learner shrinks it — the known result).
 - **S16 (#16) — Qini / uplift evaluation — DONE.** `qini.py` (numpy/pandas core): Qini curve + `qini_coefficient` (area vs random diagonal), `uplift_by_decile` (observed treated−control retention per τ̂-decile), true-vs-estimated recovery; `QiniReport`; `uplift-eval` CLI. Verified: ruff + mypy clean, 138 tests green; smoke 66k rows → **Qini 260, deciles monotone +8.1pp (top) → −0.3pp (bottom = sleeping dogs)**, recovery +0.40.
 - **S17 (#17) — uplift policy + contrast — DONE. 👑** `policy.py` `contrast_policies` — targets by risk (`save_rate·P̂(churn)·CLTV`) vs uplift (`τ̂·CLTV`) at one budget, scores **both on the true counterfactual** (`true_uplift·CLTV`), counts sleeping dogs treated; `PolicyContrast` artifact; `policy-contrast` CLI. Verified: ruff + mypy clean, 143 tests green; smoke 66k rows, 3k offers → **uplift nets $59.5k vs risk $35.7k (+$23.8k, +66%), 66 vs 634 sleeping dogs**.
+- **S18 (#18) — v2 report + docs + capstone — DONE. 🎉 v2 COMPLETE.** `charts.py` +`qini_curve_chart`/`uplift_vs_risk_chart`; `report.py` `build_html` gains an **uplift section** (Qini + risk-vs-uplift + decile table) from the `qini-report`/`policy-contrast` artifacts; `report --qini/--contrast` CLI. README v2 section + quickstart; `tests/test_pipeline_v2.py` capstone (generate→uplift→qini→contrast→report). Verified: ruff + mypy clean, **147 tests green**; 308 KB v1+v2 report rendered.
 
 ## In progress
 - Nothing — **v1 shipped.**
@@ -38,12 +39,12 @@
 - **v2 — uplift / causal (BUILDING).** Design **accepted** (`docs/v2-design-brief.md`); issues **#14–#18** created (`v2-slice`). v1.1 dashboard deferred.
 
 ## Active issue
-- **#18 — S18: v2 report + docs + capstone** (last v2 slice).
+- None. 🎉 **v1 + v2 COMPLETE** — issues #1–#18 all closed; 147 tests green.
 
-## Next up (v2)
-1. **S18 (#18)** — Qini + uplift-vs-risk charts in `charts.py`; extend the report (or an uplift section); README/docs for v2; v2 capstone E2E test. Then **v2 COMPLETE**.
-2. *(Optional)* pre-public **history cleanup** (see standing constraints in memory).
-3. v1.1 Streamlit dashboard remains deferred.
+## Next up (post-v2)
+1. *(Optional)* pre-public **history cleanup** (see standing constraints in memory), then flip repo public.
+2. *(Deferred)* **v1.1 Streamlit dashboard** (`app.py`, interactive policy sliders over `charts.py`).
+3. *(Future)* v2.1: X-learner, seasonality, real A/B-test data.
 
 ## Deferred
 - **v1.1 — Streamlit `dashboard`** (`churnpilot/app.py`): interactive policy sliders over `charts.py`. Dropped for now in favor of v2; revisit after.

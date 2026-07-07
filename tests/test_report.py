@@ -14,6 +14,28 @@ CURVE = [
     {"n_targeted": k, "spend": k * 3, "retained_value": k * 5.0, "net": k * 2.0}
     for k in (100, 250, 500)
 ]
+QINI_CURVE = [
+    {"frac": 0.0, "qini": 0.0, "random": 0.0},
+    {"frac": 0.5, "qini": 300.0, "random": 200.0},
+    {"frac": 1.0, "qini": 400.0, "random": 400.0},
+]
+STRATEGIES = {
+    "risk": {"true_net_value": 35723.0, "sleeping_dogs_treated": 634},
+    "uplift": {"true_net_value": 59473.0, "sleeping_dogs_treated": 66},
+}
+QINI_REPORT = {
+    "qini_coefficient": 260.0,
+    "tau_recovery_corr": 0.40,
+    "qini_curve": QINI_CURVE,
+    "uplift_deciles": [
+        {"decile": i, "n": 1000, "obs_uplift": round(0.08 - 0.008 * i, 4)} for i in range(1, 11)
+    ],
+}
+POLICY_CONTRAST = {
+    "uplift_net_advantage": 23750.0,
+    "sleeping_dogs_avoided": 568,
+    "strategies": STRATEGIES,
+}
 
 
 # --- charts return valid PNG bytes --------------------------------------- #
@@ -59,6 +81,28 @@ def test_report_without_policy_drops_policy_chart():
     html = build_html(_eval_report(), None, None)
     assert html.count("<figure>") == 3
     assert "ECE" in html  # falls back to KS/ECE tiles when no policy
+
+
+# --- v2 uplift section --------------------------------------------------- #
+def test_v2_charts_return_png():
+    assert charts.qini_curve_chart(QINI_CURVE).startswith(PNG_MAGIC)
+    assert charts.uplift_vs_risk_chart(STRATEGIES).startswith(PNG_MAGIC)
+
+
+def test_report_appends_uplift_section():
+    html = build_html(
+        _eval_report(), None, None, qini_report=QINI_REPORT, policy_contrast=POLICY_CONTRAST
+    )
+    # v1 (gain+calibration+segment = 3) + v2 (qini + uplift-vs-risk = 2)
+    assert html.count("<figure>") == 5
+    assert "Uplift — whom does the offer actually change?" in html
+    assert "sleeping dogs avoided" in html and "$23,750" in html
+    assert '<table class="dec">' in html  # the decile table
+
+
+def test_report_omits_uplift_section_by_default():
+    html = build_html(_eval_report(), _policy_report(), None)
+    assert "Uplift — whom" not in html and html.count("<figure>") == 4
 
 
 def test_report_from_real_artifacts():

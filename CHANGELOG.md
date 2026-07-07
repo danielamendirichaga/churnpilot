@@ -134,3 +134,10 @@
 - `churnpilot/cli.py`: `policy-contrast` command (risk vs uplift head-to-head table).
 - `tests/test_policy_contrast.py` (5): uplift beats risk on true net at equal budget; uplift treats fewer sleeping dogs; requires `true_uplift`; requires `value_col`; artifact lineage/round-trip. Full suite **143 green**; ruff + mypy clean.
 - Smoke (66k rows, 3k offers @ $3): **uplift net $59,473 vs risk $35,723 (+$23,750, +66%); 66 vs 634 sleeping dogs treated** — scored on ground truth. This is the v2 thesis, quantified. (Closes #17)
+
+## 2026-07-07 — S18: v2 report + docs + capstone — v2 COMPLETE 🎉 (#18)
+- `churnpilot/charts.py`: `qini_curve_chart` and `uplift_vs_risk_chart` (same validated clean-light palette).
+- `churnpilot/report.py`: `build_html` gains an optional **uplift section** (`_uplift_section`) — Qini curve, risk-vs-uplift value chart, and the uplift-by-decile table — built from the `qini-report` + `policy-contrast` artifacts. `report --qini/--contrast` CLI options; one report.html now spans v1 + v2.
+- `README.md`: a v2 "Uplift / causal" section + quickstart; refreshed artifact list + status → v1 + v2 complete. `AGENTS.md` build order updated.
+- `tests/test_report.py` (+3): v2 charts return PNG; report appends the uplift section (5 figures) with qini+contrast, omits it by default. `tests/test_pipeline_v2.py` (1): capstone — generate `--treatment` → risk + uplift models → Qini → contrast → report, asserting uplift beats risk and every v2 artifact carries lineage. Full suite **147 green**; ruff + mypy clean.
+- Rendered a 308 KB self-contained v1+v2 report. **v2 done — issues #14–#18 all closed.** (Closes #18)

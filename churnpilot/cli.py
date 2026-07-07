@@ -530,6 +530,10 @@ def report(
         None, "--policy", help="policy-report.json (from `simulate-policy`)."
     ),
     model_card: Path = typer.Option(None, "--model-card", help="model-card JSON (from `train`)."),
+    qini: Path = typer.Option(None, "--qini", help="qini-report.json (from `uplift-eval`, v2)."),
+    contrast: Path = typer.Option(
+        None, "--contrast", help="policy-contrast.json (from `policy-contrast`, v2)."
+    ),
     out: Path = typer.Option(
         Path("data/report.html"), "--out", help="Where to write the HTML report."
     ),
@@ -542,8 +546,10 @@ def report(
     ev = json.loads(eval_report.read_text())
     pol = json.loads(policy.read_text()) if policy is not None else None
     mc = json.loads(model_card.read_text()) if model_card is not None else None
+    qr = json.loads(qini.read_text()) if qini is not None else None
+    pc = json.loads(contrast.read_text()) if contrast is not None else None
 
-    html = build_html(ev, pol, mc)
+    html = build_html(ev, pol, mc, qini_report=qr, policy_contrast=pc)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html)
     typer.echo(f"Wrote {out}  ({len(html):,} bytes) — open it in a browser.")

@@ -49,7 +49,9 @@ churnpilot init → validate → profile → split → train --model M --train d
 - Calibration (isotonic) is our addition on top of a cost-based threshold approach (→ S10 policy).
 - Never commit real customer data — synthetic only (data/ is gitignored).
 
-## Build order (✅ = done) — v1 COMPLETE
-✅ config+init+generate → ✅ validate → ✅ profile → ✅ metrics → ✅ split → ✅ train →
+## Build order (✅ = done) — v1 + v2 COMPLETE
+v1: ✅ config+init+generate → ✅ validate → ✅ profile → ✅ metrics → ✅ split → ✅ train →
 ✅ compare → ✅ evaluate → ✅ simulate-policy → ✅ report → ✅ monitor → ✅ package.
-Remaining: dashboard (v1.1 Streamlit) · uplift/causal (v2).
+v2 (uplift/causal): ✅ generate --treatment → ✅ train-uplift (S/T-learner) → ✅ uplift-eval (Qini) →
+✅ policy-contrast (risk vs uplift) → ✅ report uplift section.
+Remaining: dashboard (v1.1 Streamlit) · v2.1 (X-learner, seasonality, real A/B data).
