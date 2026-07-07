@@ -20,15 +20,17 @@
 
 - **S10 (#10) — `simulate-policy` — DONE.** `policy.py` `simulate_policy` — scores customers, ranks by `benefit(x)=save_rate·P(churn)·CLTV − offer_cost`, targets the positive-benefit set under a budget (`--budget $` or `--n-offers`), reports retained value / spend / net / ROI + a trade-off curve + by-segment; emits `PolicyReport` artifact. Requires `value_col`. Verified: ruff + mypy clean, 106 tests green; smoke — $2k budget → 666 targeted, ROI 6.15×; unlimited → net $32,767, ROI 2.37×.
 
+- **S11 (#11) — `charts` + `report` — DONE.** `charts.py` — one tested source of visuals (validated **clean-light** palette): gain/lift, calibration, per-segment lift, policy trade-off (each → PNG bytes). `report.py` `build_html` assembles a self-contained `report.html` (stat tiles + charts embedded base64) from the `eval-report`/`policy-report`/`model-card` artifacts. `report` CLI. Enriched `EvalReport` with a `gain` table. Verified: ruff + mypy clean, 111 tests green; smoke — 248 KB self-contained report, 4 charts; design signed off.
+
 ## In progress
 - Nothing.
 
 ## Active issue
-- **#11 — S11: `charts` + `report`** (next to build).
+- **#12 — S12: `monitor`** (next to build).
 
 ## Next up
-1. Build **S11 (#11): `charts` + `report`** — a single tested `charts.py` (gain/lift, calibration, per-segment, policy trade-off) feeding a shareable `report.html`.
-2. Then S12 `monitor` (#12), S13 agent wiring + package (#13). *(S11 is the first visual slice — brief design-direction step first per WORKFLOW §2.4.)*
+1. Build **S12 (#12): `monitor`** — per-feature PSI across cohorts vs a reference; raise a retrain flag when drift crosses a threshold; graceful skip if no `date_col`; emit `drift-report` artifact.
+2. Then S13 (#13) agent wiring (finalize `AGENTS.md` guardrails/command-map) + package (`pip install .` + README quickstart). Then v1.1: S14 Streamlit `dashboard`.
 
 ## Key locked decisions (see docs/DESIGN_BRIEF.md for full detail)
 - Domain: streaming monthly subscription; target `churn_next_30d` (binary, next-cycle).

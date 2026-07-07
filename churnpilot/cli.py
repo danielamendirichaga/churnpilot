@@ -522,5 +522,31 @@ def simulate_policy_cmd(
     )
 
 
+@app.command()
+def report(
+    eval_report: Path = typer.Option(..., "--eval", help="eval-report.json (from `evaluate`)."),
+    policy: Path = typer.Option(
+        None, "--policy", help="policy-report.json (from `simulate-policy`)."
+    ),
+    model_card: Path = typer.Option(None, "--model-card", help="model-card JSON (from `train`)."),
+    out: Path = typer.Option(
+        Path("data/report.html"), "--out", help="Where to write the HTML report."
+    ),
+) -> None:
+    """Render a shareable, self-contained HTML report from the pipeline artifacts."""
+    import json
+
+    from .report import build_html
+
+    ev = json.loads(eval_report.read_text())
+    pol = json.loads(policy.read_text()) if policy is not None else None
+    mc = json.loads(model_card.read_text()) if model_card is not None else None
+
+    html = build_html(ev, pol, mc)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(html)
+    typer.echo(f"Wrote {out}  ({len(html):,} bytes) — open it in a browser.")
+
+
 if __name__ == "__main__":  # pragma: no cover
     app()

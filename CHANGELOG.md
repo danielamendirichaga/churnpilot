@@ -89,3 +89,11 @@
 - `churnpilot/cli.py`: `simulate-policy` command; `train_model` return typed `Any`; added `Optional` import.
 - `tests/test_policy.py` (8): unlimited targets all profitable, n_offers/budget caps, requires-CLTV error, budget⊕n_offers conflict, segments sum to targeted, artifact round-trip, higher offer-cost shrinks eligible. Full suite 106 green; ruff + mypy clean.
 - Smoke: $2k budget → 666 targeted, ROI 6.15×; unlimited → net $32,767 at ROI 2.37× (the diminishing-returns retention curve). `save_rate` is a fixed v1 assumption (uplift replaces it in v2). (Closes #10)
+
+## 2026-07-07 — S11: charts + report (#11)
+- `churnpilot/charts.py`: one tested source of visuals in a validated clean-light palette (single y-axis, recessive grid, thin marks, selective direct labels) — `gain_chart`, `calibration_chart`, `segment_lift_chart`, `policy_tradeoff_chart`, each returning PNG bytes.
+- `churnpilot/report.py`: `build_html()` assembles a **self-contained** `report.html` (headline stat tiles + the four charts embedded as base64) purely from the typed artifacts — no external assets, no compute.
+- `churnpilot/cli.py`: `report` command (`--eval`/`--policy`/`--model-card`/`--out`).
+- `churnpilot/evaluate.py`: enriched `EvalReport` with a `gain` table (so the report can draw the gain curve).
+- `tests/test_report.py` (5): charts return valid PNG, report is self-contained (base64, no http links), figure counts, KS/ECE fallback without policy, end-to-end from real artifacts. Full suite 111 green; ruff + mypy clean.
+- Design signed off (clean-light) via a preview artifact; smoke: 248 KB report.html with 4 charts. (Closes #11)

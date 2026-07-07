@@ -25,6 +25,7 @@ class EvalReport(ArtifactBase):
     threshold: float
     metrics: dict
     calibration: list[dict]
+    gain: list[dict] = []
     segments: dict
     score_psi: Optional[float] = None
 
@@ -97,6 +98,7 @@ def evaluate_model(
         threshold=threshold,
         metrics=metrics,
         calibration=m.calibration_table(y, proba),
+        gain=m.gain_table(y, proba),
         segments=segments,
         score_psi=score_psi,
         parent_sha256=content_hash(test_df),
