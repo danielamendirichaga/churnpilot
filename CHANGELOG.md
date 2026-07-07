@@ -70,3 +70,10 @@
 - De-staled `AGENTS.md` (accurate key-files map + command list + build order with ✅), `cli.py`/`WORKFLOW.md` build-order strings (added `compare`), `STATUS.md` (date + removed resolved blocker), `DESIGN_BRIEF.md` (deps note resolved).
 - Corrected "logistic (L1/L2)" → "(L1)" in PRD/ADRs/DESIGN_BRIEF to match the implementation; added an S1–S7 progress note to the PRD build plan.
 - Neutralized all external references across docs + docstrings for the public release (kept technical rationale as "standard, defensible methods"). Suite 88 green.
+
+## 2026-07-07 — S8: compare (#8)
+- `churnpilot/compare.py`: `compare_models()` fits the shortlist on train, scores a holdout, and ranks each model on held-out AUC/KS/top-decile-lift/PR-AUC **and** stability (train→holdout auc/ks drop, score-PSI) with a `stable` gate flag (auc_drop < 0.05 and score-PSI < 0.2). Reuses `model.train_model` + `metrics` — no new math.
+- `churnpilot/cli.py`: `compare` command (ranked table + names the best-AUC and most-stable model).
+- `churnpilot/model.py`: `train_model` return type `object` → `Any` (estimator has `predict_proba`).
+- `tests/test_compare.py` (5): ranking order, performance+stability columns, rf-overfits-more-than-logistic, single-model, determinism. Full suite 93 green; ruff + mypy clean.
+- Smoke: L1 logistic best held-out AUC 0.675 AND most stable (drop +0.012, score-PSI 0.019); rf/xgboost overfit (drop +0.23 / +0.16). (Closes #8)

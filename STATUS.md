@@ -14,15 +14,17 @@
 - **S6 (#6) — `split` — DONE.** `artifacts.py` (**`ArtifactBase`** + `parent_sha256` lineage + `content_hash` + JSON sidecar — the contract layer). `split.py` `split_dataset` (time/grouped/random) + leakage guard + `SplitManifest`. `split` CLI writes 3 parquets + `split-manifest.json`. Verified: ruff + mypy clean, 71 tests green; smoke — time is time-ordered (1,334 legit overlap, ✔), random flags 4,822 entity leakage (⚠).
 - **S7 (#7) — `train` — DONE (+amended).** `model.py`: menu (logistic L1 / pruned tree / rf / xgboost) in a leakage-safe `ColumnTransformer` pipeline (fit-on-train), optional SMOTE + isotonic calibration, always-on baseline floor; `ModelCard` artifact; joblib persist/load. A standard, leakage-safe stack. **Amendment:** XGBoost `--early-stopping` over a mode-aware inner-val (time-aware panel / stratified snapshot) + a train-time `⚠ leakage` warning. Added deps `xgboost`/`imbalanced-learn`/`joblib` + macOS `libomp`. Verified: ruff + mypy clean, 88 tests green. (Measured: early-stopping 0.662 vs fixed 0.655; time-vs-stratified inner-val negligible — kept time-aware on principle.)
 
+- **S8 (#8) — `compare` — DONE.** `compare.py` `compare_models` — fits the shortlist on train, scores a holdout, ranks on held-out AUC/KS/lift/PR-AUC **and** stability (train→holdout auc/ks drop, score-PSI) + a `stable` gate flag. `compare` CLI prints the ranked table + names best + most-stable. Reuses `model.py`/`metrics.py`. Verified: ruff + mypy clean, 93 tests green; smoke — L1 logistic best (0.675) *and* most stable (drop +0.012) while rf/xgboost overfit (drop +0.23/+0.16).
+
 ## In progress
 - Nothing.
 
 ## Active issue
-- **#8 — S8: `compare`** (next to build).
+- **#9 — S9: `evaluate`** (next to build).
 
 ## Next up
-1. Build **S8 (#8): `compare`** — fit the shortlist and rank on held-out performance + stability (train→test drop, score-PSI). Reuses `model.py` + `metrics.py`.
-2. Then S9 `evaluate` (#9), S10 `simulate-policy` (#10), … per `docs/PRD.md` §7.
+1. Build **S9 (#9): `evaluate`** — load a model, score held-out data, report the union metric pack + calibration + per-segment slices; emit `eval-report` artifact.
+2. Then S10 `simulate-policy` (#10), S11 `charts`+`report` (#11), … per `docs/PRD.md` §7.
 
 ## Key locked decisions (see docs/DESIGN_BRIEF.md for full detail)
 - Domain: streaming monthly subscription; target `churn_next_30d` (binary, next-cycle).

@@ -15,7 +15,7 @@ This module is allowed to import scikit-learn / xgboost (the tested metric core 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import joblib
 import numpy as np
@@ -305,7 +305,7 @@ def train_model(
     tune: bool = False,
     early_stopping: bool = False,
     seed: int = 42,
-) -> tuple[object, ModelCard]:
+) -> tuple[Any, ModelCard]:
     """Fit ``model`` on ``train_df`` and return (fitted estimator, ModelCard)."""
     if model not in MODELS:
         raise ModelError(f"unknown model {model!r} (use {' | '.join(MODELS)})")

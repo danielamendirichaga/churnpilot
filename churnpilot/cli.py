@@ -319,5 +319,63 @@ def train(
     typer.echo(f"  floor : AUC {bm['auc']:.4f}  (majority-class baseline to beat)")
 
 
+@app.command()
+def compare(
+    train: Path = typer.Option(..., "--train", help="Training parquet (a split output)."),
+    holdout: Path = typer.Option(
+        ..., "--holdout", help="Held-out parquet to rank on (e.g. the val split)."
+    ),
+    config: Path = typer.Option(
+        Path("churn.yaml"), "--config", help="Path to the churn.yaml config."
+    ),
+    models: str = typer.Option("", "--models", help="Comma-separated subset (default: all)."),
+    seed: int = typer.Option(42, "--seed", help="RNG seed."),
+) -> None:
+    """Fit the model shortlist and rank on held-out performance AND stability."""
+    import pandas as pd
+
+    from .compare import compare_models
+    from .config import ConfigError, load_config
+    from .model import MODELS, ModelError
+
+    try:
+        cfg = load_config(config)
+    except ConfigError as exc:
+        typer.echo(str(exc))
+        raise typer.Exit(code=1) from exc
+
+    tr, ho = pd.read_parquet(train), pd.read_parquet(holdout)
+    shortlist = [x.strip() for x in models.split(",") if x.strip()] or list(MODELS)
+    try:
+        rows = compare_models(tr, ho, cfg, models=shortlist, seed=seed)
+    except ModelError as exc:
+        typer.echo(str(exc))
+        raise typer.Exit(code=1) from exc
+
+    table = pd.DataFrame(rows)
+    for col in ("holdout_auc", "holdout_ks", "holdout_pr_auc"):
+        table[col] = table[col].round(4)
+    table["holdout_lift"] = table["holdout_lift"].round(2)
+    table["stable"] = table["stable"].map({True: "✔", False: ""})
+
+    typer.echo(f"Model comparison  ({len(tr):,} train → {len(ho):,} holdout rows)")
+    typer.echo("")
+    with pd.option_context("display.max_columns", None, "display.width", 200):
+        typer.echo(table.to_string(index=False))
+
+    best = rows[0]
+    stable = [r for r in rows if r["stable"]]
+    typer.echo("")
+    typer.echo(f"  best held-out AUC : {best['model']} ({best['holdout_auc']:.4f})")
+    if stable:
+        pick = min(stable, key=lambda r: r["auc_drop"])
+        typer.echo(
+            f"  most stable       : {pick['model']} (auc_drop {pick['auc_drop']:+.4f}, "
+            f"score-PSI {pick['score_psi']:.3f}) — prefer for a model you'll trust next quarter"
+        )
+    else:
+        typer.echo("  ⚠ none passed the stability gate (auc_drop < 0.05 and score-PSI < 0.2)")
+
+
 if __name__ == "__main__":  # pragma: no cover
     app()
