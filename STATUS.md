@@ -1,4 +1,4 @@
-# Status — churnpilot (updated 2026-07-03)
+# Status — churnpilot (updated 2026-07-07)
 
 ## Done
 - Setup complete: `churnpilot` package, `.venv` (Python 3.11.15), deps installed, verified green (`pytest` + `churnpilot version`).
@@ -35,4 +35,4 @@
 - Scope: v1 (full core loop incl. compare + monitor) · v1.1 (Streamlit dashboard) · v2 (uplift, seasonality).
 
 ## Blockers / open questions
-- None. (pyproject to gain `xgboost` / `imbalanced-learn` / `pydantic` when those slices land.)
+- None.

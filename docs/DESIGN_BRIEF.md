@@ -31,7 +31,7 @@ typed artifacts with lineage = the contract. Single-agent, human-in-the-loop.
 | 3 | Unit of observation | **Panel** — one row per active subscriber per month (`observation_month` cohorts) |
 | 4 | Data-shape support | Config-driven: date col present → panel (time-split + drift); absent → snapshot (stratified split; drift/time-split skip gracefully) |
 | 5 | Real datasets | Synthetic = "Netflix-style" (full pipeline); Telco = real snapshot smoke test (Bank Churn alt); KKBox = real panel option |
-| 6 | Model menu (capped) | logistic (L1/L2), pruned decision tree, random forest, XGBoost |
+| 6 | Model menu (capped) | logistic (L1), pruned decision tree, random forest, XGBoost |
 | 7 | Model choice | **EDA-driven agent recommendation** over the menu + always-on baseline floor + `compare` step |
 | 8 | Imbalance | SMOTE option (train-folds only) **+** cost-based threshold (course method) |
 | 9 | Calibration | isotonic (`CalibratedClassifierCV`) + calibration check in `evaluate` (fills a course gap) |
@@ -91,7 +91,7 @@ One row = one active subscriber-month. Deterministic (seeded). Markers: 🎯 dri
 
 ## 5. Modeling (`train`, `compare`)
 
-- **Menu (capped):** `logistic` (L1/L2 via `LogisticRegressionCV`, C tuned by CV → embedded feature selection) · `decision-tree` (pruned via `ccp_alpha`, interpretability/visualization) · `random-forest` (bagging, robust low-tuning) · `xgboost` (boosting, likely top performer, `GridSearchCV` + `StratifiedKFold` + early stopping).
+- **Menu (capped):** `logistic` (L1 via `LogisticRegressionCV`, C tuned by CV → embedded feature selection) · `decision-tree` (pruned via `ccp_alpha`, interpretability/visualization) · `random-forest` (bagging, robust low-tuning) · `xgboost` (boosting, likely top performer, `GridSearchCV` + `StratifiedKFold` + early stopping).
 - **Baseline floor:** always run (majority-class / simple logistic) — everything must beat it. Not a "choice," a reference.
 - **Model choice = EDA-driven agent recommendation** over the menu (agent reads `profile` output, recommends a family *with reasons*, DS decides), then `compare` fits the shortlist and **ranks on held-out + stability** ("select on stability, not just peak AUC": small train→test drop, low score-PSI).
 - **Course-grounded (from `local-notes/`):**
@@ -172,7 +172,7 @@ Union of the two conventions:
 
 - **Python 3.11**, `uv`, `typer` CLI. Deterministic: **seed everything**.
 - **Deps:** pandas, numpy, pyarrow, pyyaml (core); scikit-learn, **xgboost**, **imbalanced-learn** (SMOTE), **pydantic** (artifacts), matplotlib/plotly, streamlit (model/viz layers). Dev: pytest, ruff, mypy.
-  - *Note:* `pyproject.toml` currently lacks `xgboost`, `imbalanced-learn`, `pydantic` — add them when their slices land.
+  - *(All deps now declared in `pyproject.toml`; `xgboost`/`imbalanced-learn` landed in S7.)*
 - **The tested core (metrics/validate) imports only numpy/pandas** — never sklearn/xgboost (keeps that layer light & fast to test).
 - **Four principles** (from credit-lab, restated for churn): DS-leads (propose don't decide) · compute in tested code not the prompt · working-result enforcement (nothing done until it runs green) · multi-entry (any stage accepts a user file/artifact).
 

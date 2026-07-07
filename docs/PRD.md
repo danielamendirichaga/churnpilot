@@ -31,7 +31,7 @@ lineage are the contract. See `context.md` for goals, users, constraints, and no
 | **FR-PROF** | `profile` reports per-column role, null rate, cardinality, numeric summaries, and target relationship (the EDA numbers the agent reasons over). |
 | **FR-MET** | A pure, tested metric core: decile-KS, PSI (frozen reference edges), rank-order-breaks, lift/gain + top-decile lift, precision/recall/F1, log-loss, calibration. Deterministic; documented score direction (higher = higher churn risk). |
 | **FR-SPL** | `split` supports `time` (default, out-of-time) / `grouped` / `random`, with a leakage guard (row-level disjoint on `(subscriber_id, observation_month)` + temporal ordering; subscriber-overlap report). |
-| **FR-TRN** | `train` fits a model from the capped menu (logistic L1/L2 · pruned tree · random forest · xgboost) in a **leakage-safe** `Pipeline`/`ColumnTransformer` (fit on train only), with optional SMOTE (train-folds only) and isotonic calibration; always also fits the **baseline floor**. |
+| **FR-TRN** | `train` fits a model from the capped menu (logistic L1 · pruned tree · random forest · xgboost) in a **leakage-safe** `Pipeline`/`ColumnTransformer` (fit on train only), with optional SMOTE (train-folds only) and isotonic calibration; always also fits the **baseline floor**. |
 | **FR-CMP** | `compare` fits the shortlist and ranks candidates on held-out performance **and stability** (train→test metric drop, score-PSI). |
 | **FR-EVAL** | `evaluate` loads a model, scores held-out data, and reports the **union metric pack** + calibration check + per-segment slices (e.g. by `plan_tier`). |
 | **FR-POL** | `simulate-policy` computes `benefit(x)=save_rate·P(churn)·CLTV − offer_cost`, targets under a **budget (N offers or $ spend)**, and reports the targeted set, expected retained value, spend, and a trade-off curve by segment. |
@@ -91,6 +91,9 @@ lineage are the contract. See `context.md` for goals, users, constraints, and no
 ---
 
 ## 7. Slice breakdown (build plan → issues)
+
+> **Progress: S1–S7 shipped** (config → generate → source+validate → profile → metrics → split →
+> train); **S8 (`compare`) is next.** See `STATUS.md` / `CHANGELOG.md` for the live state.
 
 Each slice is one shippable unit → one GitHub issue. **DoD (every slice):** static (ruff/mypy) →
 unit → integration → behavioral/E2E green · new artifact validates (if any) · `STATUS.md` +

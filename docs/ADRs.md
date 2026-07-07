@@ -38,7 +38,7 @@ artifact. Note: credit-lab's "disjoint on `application_id`" guard doesn't transf
 
 ## ADR-005 — Bounded model menu + EDA-driven agent choice + baseline floor + compare
 **Context:** blindly always using one model is poor practice; EDA should inform model choice.
-**Decision:** a capped menu (logistic L1/L2, pruned tree, random forest, XGBoost). The agent
+**Decision:** a capped menu (logistic L1, pruned tree, random forest, XGBoost). The agent
 recommends a family from EDA (human decides); a baseline floor is always run; `compare` fits
 the shortlist and ranks on held-out **stability** ("select on stability, not just peak AUC").
 **Consequences:** rigorous, defensible selection; not a hardcoded model.

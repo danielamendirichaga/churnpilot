@@ -78,9 +78,9 @@ Do this when you reach the visual slices (build steps 7–8), not up front.
 ## 3) Build
 
 - Orient (AGENTS → STATUS → issue), then work one slice at a time, smallest viable first.
-- Build order: `config`+`init`+`generate` → `validate` → `profile`+`metrics` →
-  `split`→`train`→`evaluate` → `simulate-policy` → `monitor` → `charts`+`report` →
-  `app`+`dashboard` → package.
+- Build order: `config`+`init`+`generate` → `validate` → `profile` → `metrics` →
+  `split` → `train` → `compare` → `evaluate` → `simulate-policy` → `charts`+`report` →
+  `monitor` → package → `app`+`dashboard` (v1.1).
 - For visual slices, build the first chart per the locked design direction and confirm
   taste before scaling to the rest.
 - On finishing each slice, apply the **DoD**.

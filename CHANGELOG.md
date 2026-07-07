@@ -63,3 +63,9 @@
 - `churnpilot/cli.py`: `train` now warns `⚠ possible leakage` when a to-be-used feature has |target corr| ≥ 0.6 (reuses `profile.high_corr_features`), and exposes `--early-stopping`.
 - **Honest finding (measured, not assumed):** early stopping modestly beats the fixed-300 default (test AUC 0.662 vs 0.655); but the time-vs-stratified inner-val choice is *negligible* here (0.6616 vs 0.6607) — my prior claim that stratified would overfit did not hold (regularized XGB + modest per-entity signal). Time-aware kept as the default on *consistency/safety* grounds, not a performance win.
 - `tests/test_model.py` (+6 → 88 total): early-stopping panel(time)/snapshot(stratified) inner-val, best_iteration bounds, mutual-exclusion errors, CLI leakage warning. ruff + mypy clean.
+
+## 2026-07-07 — Docs pass: public-repo readiness
+- Rewrote `README.md` as a real public front page: the idea + architecture diagram, a real end-to-end quickstart, highlights, docs links, and a **Provenance** section (clean-room/original, synthetic-only, grounded in — not copied from — established practice; Tool-assisted, architected/directed by me).
+- Added `LICENSE` (MIT).
+- De-staled `AGENTS.md` (accurate key-files map + command list + build order with ✅), `cli.py`/`WORKFLOW.md` build-order strings (added `compare`), `STATUS.md` (date + removed resolved blocker), `DESIGN_BRIEF.md` (deps note resolved).
+- Corrected "logistic (L1/L2)" → "(L1)" in PRD/ADRs/DESIGN_BRIEF to match the implementation; added an S1–S7 progress note to the PRD build plan. Suite 88 green.

@@ -1,10 +1,10 @@
 """churnpilot command-line interface.
 
 Commands are added one slice at a time, following the build order in WORKFLOW.md:
-config+init+generate -> validate -> profile+metrics -> split -> train -> evaluate ->
-simulate-policy -> monitor -> report -> dashboard.
+generate -> validate -> profile -> metrics -> split -> train -> compare -> evaluate ->
+simulate-policy -> report -> monitor -> dashboard.
 
-Only `version` exists at setup. Each later command is its own build slice with tests.
+Built so far: version, init, generate, validate, profile, metrics, split, train.
 """
 
 from __future__ import annotations
