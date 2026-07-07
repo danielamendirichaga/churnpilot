@@ -10,13 +10,15 @@ offers or a dollar cap), and report retained value, spend, net, ROI, a trade-off
 by-segment breakdown. This is per-customer cost-sensitive targeting: targeting only where
 ``benefit(x) > 0`` is a threshold on ``P(churn)`` that scales with each customer's CLTV.
 
-``save_rate`` is a fixed assumption in v1 (stated in the report); a per-customer uplift estimate
-replaces it in v2. Reuses the fitted model + config; no new metric math.
+``save_rate`` is a fixed assumption for the risk policy; :func:`contrast_policies` (v2) drops it,
+replacing ``save_rate·P(churn)`` with a per-customer **uplift** estimate ``τ̂(x)`` and scoring both
+strategies on the *true* counterfactual — the honest test of whether targeting persuadables beats
+targeting the highest-risk. Reuses the fitted models + config; no new metric math.
 """
 
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 
 import numpy as np
 import pandas as pd
@@ -127,5 +129,101 @@ def simulate_policy(
         roi=roi,
         tradeoff_curve=curve,
         segments=segments,
+        parent_sha256=content_hash(data),
+    )
+
+
+class PolicyContrast(ArtifactBase):
+    artifact: Literal["policy-contrast"] = "policy-contrast"
+    offer_cost: float
+    save_rate: float
+    budget: Optional[float] = None
+    n_offers: Optional[int] = None
+    n_customers: int
+    strategies: dict  # {"risk": {...}, "uplift": {...}}
+    uplift_net_advantage: float  # true net(uplift) − true net(risk)
+    sleeping_dogs_avoided: int
+
+
+def _target_set(
+    benefit: np.ndarray, offer_cost: float, budget: Optional[float], n_offers: Optional[int]
+) -> tuple[np.ndarray, int]:
+    """Rank by benefit desc, keep the positive-benefit set within the budget (count or $)."""
+    order = np.argsort(-benefit, kind="mergesort")
+    cap = int((benefit > 0).sum())
+    if n_offers is not None:
+        cap = min(cap, n_offers)
+    if budget is not None:
+        cap = min(cap, int(budget // offer_cost) if offer_cost > 0 else cap)
+    mask = np.zeros(len(benefit), dtype=bool)
+    mask[order[:cap]] = True
+    return mask, cap
+
+
+def contrast_policies(
+    risk_estimator: Any,
+    uplift_model: Any,
+    data: pd.DataFrame,
+    config: ChurnConfig,
+    offer_cost: float = 5.0,
+    budget: Optional[float] = None,
+    n_offers: Optional[int] = None,
+    save_rate: float = 0.3,
+) -> PolicyContrast:
+    """Target by **risk** vs by **uplift** under one budget, scored on the true counterfactual.
+
+    Risk ranks by ``save_rate·P̂(churn)·CLTV``; uplift ranks by ``τ̂·CLTV``. Each targeted set is
+    then valued with the *true* effect ``true_uplift·CLTV`` (synthetic ground truth), so treating a
+    sleeping dog costs value. Requires an A/B panel with ``true_uplift`` and a CLTV column.
+    """
+    cols = config.columns
+    if cols.value_col is None or cols.value_col not in data.columns:
+        raise PolicyError("policy contrast requires a value_col (CLTV) in the data")
+    if "true_uplift" not in data.columns:
+        raise PolicyError(
+            "policy contrast needs `true_uplift` for honest scoring — use an A/B panel "
+            "(`generate --treatment`)"
+        )
+
+    data = data.reset_index(drop=True)
+    numeric, categorical = feature_columns(data, config)
+    cltv = data[cols.value_col].to_numpy(dtype=float)
+    true_tau = data["true_uplift"].to_numpy(dtype=float)
+
+    p_churn = risk_estimator.predict_proba(data[numeric + categorical])[:, 1]
+    tau_hat = uplift_model.predict_uplift(data)
+    benefits = {
+        "risk": save_rate * p_churn * cltv - offer_cost,
+        "uplift": tau_hat * cltv - offer_cost,
+    }
+
+    strategies: dict = {}
+    for name, benefit in benefits.items():
+        mask, cap = _target_set(benefit, offer_cost, budget, n_offers)
+        true_retained = float((true_tau[mask] * cltv[mask]).sum())  # honest: the causal value
+        spend = float(cap * offer_cost)
+        strategies[name] = {
+            "n_targeted": cap,
+            "true_retained_value": round(true_retained, 2),
+            "spend": round(spend, 2),
+            "true_net_value": round(true_retained - spend, 2),
+            "roi": round(true_retained / spend, 3) if spend > 0 else None,
+            "sleeping_dogs_treated": int(((true_tau < 0) & mask).sum()),
+        }
+
+    return PolicyContrast(
+        offer_cost=offer_cost,
+        save_rate=save_rate,
+        budget=budget,
+        n_offers=n_offers,
+        n_customers=len(data),
+        strategies=strategies,
+        uplift_net_advantage=round(
+            strategies["uplift"]["true_net_value"] - strategies["risk"]["true_net_value"], 2
+        ),
+        sleeping_dogs_avoided=(
+            strategies["risk"]["sleeping_dogs_treated"]
+            - strategies["uplift"]["sleeping_dogs_treated"]
+        ),
         parent_sha256=content_hash(data),
     )

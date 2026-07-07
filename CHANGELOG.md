@@ -128,3 +128,9 @@
 - `churnpilot/cli.py`: `uplift-eval` command (Qini coefficient + recovery + the decile table).
 - `tests/test_qini.py` (5): Qini ordering **oracle > model > no-targeting** (and model > 0); deciles monotone in predicted uplift with top-3 observed > bottom-3; report shape + recovery > 0.25; requires `treated`; lineage/round-trip. Full suite **138 green**; ruff + mypy clean.
 - Smoke (66k rows): Qini **260**, observed uplift by decile **+8.1pp (top) → −0.3pp (bottom = sleeping dogs)**, τ recovery **+0.40** — the model's ranking tracks the true causal effect. (Closes #16)
+
+## 2026-07-07 — S17: uplift policy + risk-vs-uplift contrast (v2 · #17) 👑
+- `churnpilot/policy.py`: `contrast_policies()` targets by **risk** (`save_rate·P̂(churn)·CLTV − offer_cost`) vs **uplift** (`τ̂·CLTV − offer_cost`) under one budget, then scores **both on the true counterfactual** (`Σ true_uplift·CLTV` over the targeted set) so treating a sleeping dog costs value. Reports each strategy's targeted count / spend / true net / ROI / sleeping-dogs-treated, plus the uplift net advantage and sleeping dogs avoided. `PolicyContrast` artifact; shared `_target_set` helper. Requires an A/B panel (`true_uplift`) + CLTV.
+- `churnpilot/cli.py`: `policy-contrast` command (risk vs uplift head-to-head table).
+- `tests/test_policy_contrast.py` (5): uplift beats risk on true net at equal budget; uplift treats fewer sleeping dogs; requires `true_uplift`; requires `value_col`; artifact lineage/round-trip. Full suite **143 green**; ruff + mypy clean.
+- Smoke (66k rows, 3k offers @ $3): **uplift net $59,473 vs risk $35,723 (+$23,750, +66%); 66 vs 634 sleeping dogs treated** — scored on ground truth. This is the v2 thesis, quantified. (Closes #17)

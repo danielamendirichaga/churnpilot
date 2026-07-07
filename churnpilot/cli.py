@@ -689,5 +689,85 @@ def uplift_eval_cmd(
         typer.echo(f"    decile {r['decile']:>2}  n={r['n']:>6,}  observed uplift {obs}")
 
 
+@app.command("policy-contrast")
+def policy_contrast_cmd(
+    model: Path = typer.Option(..., "--model", help="Risk model (.pkl, from `train`)."),
+    uplift_model: Path = typer.Option(
+        ..., "--uplift-model", help="Uplift model (.pkl, from `train-uplift`)."
+    ),
+    data: Path = typer.Option(..., "--data", help="A/B panel parquet (with `true_uplift`)."),
+    config: Path = typer.Option(
+        Path("churn.yaml"), "--config", help="Path to the churn.yaml config."
+    ),
+    save_rate: float = typer.Option(0.3, "--save-rate", help="save_rate for the risk strategy."),
+    offer_cost: float = typer.Option(5.0, "--offer-cost", help="Cost of one save-offer ($)."),
+    budget: Optional[float] = typer.Option(None, "--budget", help="Total offer budget ($)."),
+    n_offers: Optional[int] = typer.Option(None, "--n-offers", help="Max number of offers."),
+    report_out: Path = typer.Option(
+        Path("data/policy-contrast.json"), "--report-out", help="Where to write the contrast."
+    ),
+) -> None:
+    """Head-to-head: target by risk vs by uplift at one budget, scored on the true effect."""
+    import pandas as pd
+
+    from .config import ConfigError, load_config
+    from .model import load_model
+    from .policy import PolicyError, contrast_policies
+    from .uplift import load_uplift
+
+    try:
+        cfg = load_config(config)
+    except ConfigError as exc:
+        typer.echo(str(exc))
+        raise typer.Exit(code=1) from exc
+
+    risk = load_model(model)
+    up = load_uplift(uplift_model)
+    df = pd.read_parquet(data)
+    try:
+        report = contrast_policies(
+            risk,
+            up,
+            df,
+            cfg,
+            offer_cost=offer_cost,
+            budget=budget,
+            n_offers=n_offers,
+            save_rate=save_rate,
+        )
+    except PolicyError as exc:
+        typer.echo(str(exc))
+        raise typer.Exit(code=1) from exc
+
+    report_out.parent.mkdir(parents=True, exist_ok=True)
+    report.write_json(report_out)
+
+    if budget is not None:
+        limit = f"${budget:,.0f} budget"
+    elif n_offers is not None:
+        limit = f"{n_offers:,} offers"
+    else:
+        limit = "unlimited"
+    typer.echo(
+        f"Policy contrast — risk vs uplift  ({limit}, offer ${offer_cost:g}, "
+        f"scored on the true counterfactual)  → {report_out}"
+    )
+    typer.echo("")
+    typer.echo(
+        f"  {'strategy':<9} {'targeted':>9} {'spend':>10} {'true net':>12} {'ROI':>7} {'sleeping dogs':>14}"
+    )
+    for name in ("risk", "uplift"):
+        s = report.strategies[name]
+        roi = f"{s['roi']:.2f}x" if s["roi"] is not None else "  n/a"
+        typer.echo(
+            f"  {name:<9} {s['n_targeted']:>9,} {'$' + format(s['spend'], ',.0f'):>10} "
+            f"{'$' + format(s['true_net_value'], ',.0f'):>12} {roi:>7} {s['sleeping_dogs_treated']:>14,}"
+        )
+    typer.echo(
+        f"\n  → targeting by uplift nets ${report.uplift_net_advantage:,.0f} more and treats "
+        f"{report.sleeping_dogs_avoided:,} fewer sleeping dogs at the same budget."
+    )
+
+
 if __name__ == "__main__":  # pragma: no cover
     app()

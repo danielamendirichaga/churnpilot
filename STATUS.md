@@ -29,6 +29,7 @@
 - **S14 (#14) — generator treatment simulation — DONE.** `make_panel(treatment=True)` overlays a randomized A/B test: balanced `treated`, heterogeneous `τ(x)` (`_uplift_tau`) spanning all 4 quadrants incl. sleeping dogs (τ<0), monotone-coupled potential outcomes → observed churn = factual; oracle cols (`true_uplift`/counterfactuals) for honest Qini. `feature_columns` guards oracle+`treated` from leaking. `generate --treatment` CLI. Verified: ruff + mypy clean, 126 tests green (v1 untouched); smoke 8k×24 → treated 0.498, ATE +0.037, 8% sleeping dogs.
 - **S15 (#15) — uplift models — DONE.** `uplift.py`: S-learner (treated as feature) + T-learner (two models) over `model.py`; `predict_uplift` = churn-prob reduction; `UpliftCard` (+ τ-recovery corr vs synthetic truth); `train-uplift` CLI + joblib persist. Verified: ruff + mypy clean, 133 tests green; smoke 66k rows → **T-learner recovery corr +0.40 vs S-learner +0.14** (both match ATE; T-learner captures heterogeneity, S-learner shrinks it — the known result).
 - **S16 (#16) — Qini / uplift evaluation — DONE.** `qini.py` (numpy/pandas core): Qini curve + `qini_coefficient` (area vs random diagonal), `uplift_by_decile` (observed treated−control retention per τ̂-decile), true-vs-estimated recovery; `QiniReport`; `uplift-eval` CLI. Verified: ruff + mypy clean, 138 tests green; smoke 66k rows → **Qini 260, deciles monotone +8.1pp (top) → −0.3pp (bottom = sleeping dogs)**, recovery +0.40.
+- **S17 (#17) — uplift policy + contrast — DONE. 👑** `policy.py` `contrast_policies` — targets by risk (`save_rate·P̂(churn)·CLTV`) vs uplift (`τ̂·CLTV`) at one budget, scores **both on the true counterfactual** (`true_uplift·CLTV`), counts sleeping dogs treated; `PolicyContrast` artifact; `policy-contrast` CLI. Verified: ruff + mypy clean, 143 tests green; smoke 66k rows, 3k offers → **uplift nets $59.5k vs risk $35.7k (+$23.8k, +66%), 66 vs 634 sleeping dogs**.
 
 ## In progress
 - Nothing — **v1 shipped.**
@@ -37,12 +38,12 @@
 - **v2 — uplift / causal (BUILDING).** Design **accepted** (`docs/v2-design-brief.md`); issues **#14–#18** created (`v2-slice`). v1.1 dashboard deferred.
 
 ## Active issue
-- **#17 — S17: uplift policy + risk-vs-uplift contrast** (next — the v2 payoff).
+- **#18 — S18: v2 report + docs + capstone** (last v2 slice).
 
 ## Next up (v2)
-1. **S17 (#17)** 👑 — `policy.py` gains `--rank-by uplift|risk`; `benefit_uplift(x)=τ(x)·CLTV−offer_cost`; contrast report (uplift vs risk at equal budget: extra retained value + sleeping dogs avoided). The money slice.
-2. Then S18 report + docs (Qini + uplift-vs-risk charts) + v2 capstone E2E.
-3. *(Optional)* pre-public **history cleanup** (see standing constraints in memory).
+1. **S18 (#18)** — Qini + uplift-vs-risk charts in `charts.py`; extend the report (or an uplift section); README/docs for v2; v2 capstone E2E test. Then **v2 COMPLETE**.
+2. *(Optional)* pre-public **history cleanup** (see standing constraints in memory).
+3. v1.1 Streamlit dashboard remains deferred.
 
 ## Deferred
 - **v1.1 — Streamlit `dashboard`** (`churnpilot/app.py`): interactive policy sliders over `charts.py`. Dropped for now in favor of v2; revisit after.
