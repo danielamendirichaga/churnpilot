@@ -83,3 +83,9 @@
 - `churnpilot/cli.py`: `evaluate` command (`--model`/`--test`/`--reference`/`--threshold`; writes eval-report + prints the scorecard + segments).
 - `tests/test_evaluate.py` (5): full metric pack, per-segment slices, score-PSI with/without reference, artifact lineage + round-trip, missing-feature error. Full suite 98 green; ruff + mypy clean.
 - Smoke: test AUC 0.655 / KS 0.219 / lift 1.92× / ECE 0.013 / score-PSI 0.027; Premium AUC 0.690 vs Standard 0.638; recall @0.5 ≈ 0 (imbalance → motivates the S10 cost-based policy). (Closes #9)
+
+## 2026-07-07 — S10: simulate-policy (#10)
+- `churnpilot/policy.py`: `simulate_policy()` — scores customers, ranks by `benefit(x)=save_rate·P(churn)·CLTV − offer_cost`, targets the positive-benefit set best-first under a budget (`--budget $` OR `--n-offers`), and reports retained value / spend / net / ROI, a net-vs-target trade-off curve, and a by-`plan_tier` breakdown. Emits a `PolicyReport` artifact with lineage; requires a `value_col` (CLTV). Cost-based per-customer targeting (threshold on P(churn) scaled by each customer's CLTV).
+- `churnpilot/cli.py`: `simulate-policy` command; `train_model` return typed `Any`; added `Optional` import.
+- `tests/test_policy.py` (8): unlimited targets all profitable, n_offers/budget caps, requires-CLTV error, budget⊕n_offers conflict, segments sum to targeted, artifact round-trip, higher offer-cost shrinks eligible. Full suite 106 green; ruff + mypy clean.
+- Smoke: $2k budget → 666 targeted, ROI 6.15×; unlimited → net $32,767 at ROI 2.37× (the diminishing-returns retention curve). `save_rate` is a fixed v1 assumption (uplift replaces it in v2). (Closes #10)

@@ -10,6 +10,7 @@ Built so far: version, init, generate, validate, profile, metrics, split, train.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Optional
 
 import typer
 
@@ -440,6 +441,85 @@ def evaluate(
             typer.echo(
                 f"    {level:<12} n={s['n']:>6,}  churn {s['churn_rate']:.1%}  AUC {auc}  lift {s['lift']:.2f}x"
             )
+
+
+@app.command("simulate-policy")
+def simulate_policy_cmd(
+    model: Path = typer.Option(..., "--model", help="Persisted fitted model (.pkl)."),
+    data: Path = typer.Option(..., "--data", help="Customer parquet to target."),
+    config: Path = typer.Option(
+        Path("churn.yaml"), "--config", help="Path to the churn.yaml config."
+    ),
+    save_rate: float = typer.Option(
+        0.3, "--save-rate", help="P(offer rescues a would-be churner)."
+    ),
+    offer_cost: float = typer.Option(5.0, "--offer-cost", help="Cost of one save-offer ($)."),
+    budget: Optional[float] = typer.Option(None, "--budget", help="Total offer budget ($)."),
+    n_offers: Optional[int] = typer.Option(None, "--n-offers", help="Max number of offers."),
+    report_out: Path = typer.Option(
+        Path("data/policy-report.json"), "--report-out", help="Where to write the policy-report."
+    ),
+) -> None:
+    """Cost-based retention targeting: whom to save under a budget, and the ROI."""
+    import pandas as pd
+
+    from .config import ConfigError, load_config
+    from .model import load_model
+    from .policy import PolicyError, simulate_policy
+
+    try:
+        cfg = load_config(config)
+    except ConfigError as exc:
+        typer.echo(str(exc))
+        raise typer.Exit(code=1) from exc
+
+    est = load_model(model)
+    df = pd.read_parquet(data)
+    try:
+        report = simulate_policy(
+            est,
+            df,
+            cfg,
+            save_rate=save_rate,
+            offer_cost=offer_cost,
+            budget=budget,
+            n_offers=n_offers,
+        )
+    except PolicyError as exc:
+        typer.echo(str(exc))
+        raise typer.Exit(code=1) from exc
+
+    report_out.parent.mkdir(parents=True, exist_ok=True)
+    report.write_json(report_out)
+
+    if budget is not None:
+        limit = f"${budget:,.0f} budget"
+    elif n_offers is not None:
+        limit = f"{n_offers:,} offers"
+    else:
+        limit = "unlimited budget"
+    typer.echo(
+        f"Retention policy  (save_rate {save_rate:g}, offer ${offer_cost:g}, {limit})  → {report_out}"
+    )
+    typer.echo("")
+    typer.echo(
+        f"  target {report.n_targeted:,} of {report.n_eligible:,} profitable "
+        f"({report.n_customers:,} customers)"
+    )
+    roi = f" | ROI {report.roi:.2f}x" if report.roi is not None else ""
+    typer.echo(
+        f"  retained value ${report.expected_retained_value:,.0f} | "
+        f"spend ${report.expected_spend:,.0f} | net ${report.net_value:,.0f}{roi}"
+    )
+    if report.segments:
+        typer.echo("\n  targeted by plan_tier:")
+        for level, s in report.segments.items():
+            typer.echo(
+                f"    {level:<12} {s['n_targeted']:>6,} offers → ${s['retained_value']:,.0f} retained"
+            )
+    typer.echo(
+        f"\n  (save_rate {save_rate:g} is a fixed v1 assumption; uplift modeling replaces it in v2)"
+    )
 
 
 if __name__ == "__main__":  # pragma: no cover

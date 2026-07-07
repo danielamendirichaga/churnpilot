@@ -18,15 +18,17 @@
 
 - **S9 (#9) — `evaluate` — DONE.** `evaluate.py` `evaluate_model` — scores held-out data, reports the union metric pack (AUC/PR-AUC/KS/rank-order/lift + precision/recall/F1/log-loss/ECE), per-segment slices (plan_tier/region), and optional score-PSI vs a reference; emits `EvalReport` artifact (lineage). `evaluate` CLI. Verified: ruff + mypy clean, 98 tests green; smoke — test AUC 0.655, ECE 0.013, PSI 0.027, Premium AUC 0.690 vs Standard 0.638.
 
+- **S10 (#10) — `simulate-policy` — DONE.** `policy.py` `simulate_policy` — scores customers, ranks by `benefit(x)=save_rate·P(churn)·CLTV − offer_cost`, targets the positive-benefit set under a budget (`--budget $` or `--n-offers`), reports retained value / spend / net / ROI + a trade-off curve + by-segment; emits `PolicyReport` artifact. Requires `value_col`. Verified: ruff + mypy clean, 106 tests green; smoke — $2k budget → 666 targeted, ROI 6.15×; unlimited → net $32,767, ROI 2.37×.
+
 ## In progress
 - Nothing.
 
 ## Active issue
-- **#10 — S10: `simulate-policy`** (next to build).
+- **#11 — S11: `charts` + `report`** (next to build).
 
 ## Next up
-1. Build **S10 (#10): `simulate-policy`** — `benefit(x)=save_rate·P(churn)·CLTV − offer_cost`, target under a budget (N offers or $), report retained value + trade-off by segment; emit `policy-report` artifact. (The crown jewel; recall @0.5 ≈ 0 → target by expected value, not a naive cutoff.)
-2. Then S11 `charts`+`report` (#11), S12 `monitor` (#12), … per `docs/PRD.md` §7.
+1. Build **S11 (#11): `charts` + `report`** — a single tested `charts.py` (gain/lift, calibration, per-segment, policy trade-off) feeding a shareable `report.html`.
+2. Then S12 `monitor` (#12), S13 agent wiring + package (#13). *(S11 is the first visual slice — brief design-direction step first per WORKFLOW §2.4.)*
 
 ## Key locked decisions (see docs/DESIGN_BRIEF.md for full detail)
 - Domain: streaming monthly subscription; target `churn_next_30d` (binary, next-cycle).
