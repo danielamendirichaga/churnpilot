@@ -122,3 +122,9 @@
 - `churnpilot/cli.py`: `train-uplift` command (`--learner s|t`, `--model`); refreshed the stale module header to the full v1+v2 command set.
 - `tests/test_uplift.py` (7): T-learner recovers τ (corr > 0.25) and the ATE; ranks persuadables above sleeping dogs; **T-learner beats S-learner on heterogeneity**; requires `treated`; unknown-learner guard; card/lineage; save/load round-trip. Full suite **133 green**; ruff + mypy clean.
 - Smoke (66k rows): T-learner recovery corr **+0.40** vs S-learner **+0.14** (both match ATE +0.040). (Closes #15)
+
+## 2026-07-07 — S16: Qini / uplift evaluation (v2 · #16)
+- `churnpilot/qini.py` (numpy/pandas core, no sklearn): `qini_coefficient` (area between the model's Qini curve and the random diagonal), `qini_curve` (downsampled points + random baseline), `uplift_by_decile` (observed treated−control retention per predicted-uplift decile), and `evaluate_uplift` → `QiniReport` with the true-vs-estimated τ recovery. Framed on retention so higher = better.
+- `churnpilot/cli.py`: `uplift-eval` command (Qini coefficient + recovery + the decile table).
+- `tests/test_qini.py` (5): Qini ordering **oracle > model > no-targeting** (and model > 0); deciles monotone in predicted uplift with top-3 observed > bottom-3; report shape + recovery > 0.25; requires `treated`; lineage/round-trip. Full suite **138 green**; ruff + mypy clean.
+- Smoke (66k rows): Qini **260**, observed uplift by decile **+8.1pp (top) → −0.3pp (bottom = sleeping dogs)**, τ recovery **+0.40** — the model's ranking tracks the true causal effect. (Closes #16)

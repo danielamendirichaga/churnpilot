@@ -641,5 +641,53 @@ def train_uplift_cmd(
         )
 
 
+@app.command("uplift-eval")
+def uplift_eval_cmd(
+    model: Path = typer.Option(..., "--model", help="Fitted uplift model (from `train-uplift`)."),
+    data: Path = typer.Option(..., "--data", help="A/B panel parquet to evaluate on."),
+    config: Path = typer.Option(
+        Path("churn.yaml"), "--config", help="Path to the churn.yaml config."
+    ),
+    report_out: Path = typer.Option(
+        Path("data/qini-report.json"), "--report-out", help="Where to write the qini-report."
+    ),
+) -> None:
+    """Evaluate an uplift model: Qini coefficient, Qini curve, and uplift-by-decile."""
+    import pandas as pd
+
+    from .config import ConfigError, load_config
+    from .qini import QiniError, evaluate_uplift
+    from .uplift import load_uplift
+
+    try:
+        cfg = load_config(config)
+    except ConfigError as exc:
+        typer.echo(str(exc))
+        raise typer.Exit(code=1) from exc
+
+    um = load_uplift(model)
+    df = pd.read_parquet(data)
+    try:
+        report = evaluate_uplift(um, df, cfg)
+    except QiniError as exc:
+        typer.echo(str(exc))
+        raise typer.Exit(code=1) from exc
+
+    report_out.parent.mkdir(parents=True, exist_ok=True)
+    report.write_json(report_out)
+
+    typer.echo(
+        f"Uplift evaluation  ({report.n_rows:,} rows: {report.n_treated:,} treated / "
+        f"{report.n_control:,} control)  → {report_out}"
+    )
+    typer.echo(f"\n  Qini coefficient: {report.qini_coefficient:.3f}  (>0 beats random targeting)")
+    if report.tau_recovery_corr is not None:
+        typer.echo(f"  τ recovery vs truth: corr {report.tau_recovery_corr:+.3f}")
+    typer.echo("\n  observed uplift by predicted-uplift decile (1 = best-targeted):")
+    for r in report.uplift_deciles:
+        obs = f"{r['obs_uplift']:+.4f}" if r["obs_uplift"] is not None else "  n/a"
+        typer.echo(f"    decile {r['decile']:>2}  n={r['n']:>6,}  observed uplift {obs}")
+
+
 if __name__ == "__main__":  # pragma: no cover
     app()

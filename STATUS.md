@@ -28,6 +28,7 @@
 ### v2 — uplift / causal
 - **S14 (#14) — generator treatment simulation — DONE.** `make_panel(treatment=True)` overlays a randomized A/B test: balanced `treated`, heterogeneous `τ(x)` (`_uplift_tau`) spanning all 4 quadrants incl. sleeping dogs (τ<0), monotone-coupled potential outcomes → observed churn = factual; oracle cols (`true_uplift`/counterfactuals) for honest Qini. `feature_columns` guards oracle+`treated` from leaking. `generate --treatment` CLI. Verified: ruff + mypy clean, 126 tests green (v1 untouched); smoke 8k×24 → treated 0.498, ATE +0.037, 8% sleeping dogs.
 - **S15 (#15) — uplift models — DONE.** `uplift.py`: S-learner (treated as feature) + T-learner (two models) over `model.py`; `predict_uplift` = churn-prob reduction; `UpliftCard` (+ τ-recovery corr vs synthetic truth); `train-uplift` CLI + joblib persist. Verified: ruff + mypy clean, 133 tests green; smoke 66k rows → **T-learner recovery corr +0.40 vs S-learner +0.14** (both match ATE; T-learner captures heterogeneity, S-learner shrinks it — the known result).
+- **S16 (#16) — Qini / uplift evaluation — DONE.** `qini.py` (numpy/pandas core): Qini curve + `qini_coefficient` (area vs random diagonal), `uplift_by_decile` (observed treated−control retention per τ̂-decile), true-vs-estimated recovery; `QiniReport`; `uplift-eval` CLI. Verified: ruff + mypy clean, 138 tests green; smoke 66k rows → **Qini 260, deciles monotone +8.1pp (top) → −0.3pp (bottom = sleeping dogs)**, recovery +0.40.
 
 ## In progress
 - Nothing — **v1 shipped.**
@@ -36,11 +37,11 @@
 - **v2 — uplift / causal (BUILDING).** Design **accepted** (`docs/v2-design-brief.md`); issues **#14–#18** created (`v2-slice`). v1.1 dashboard deferred.
 
 ## Active issue
-- **#16 — S16: Qini / uplift evaluation** (next to build).
+- **#17 — S17: uplift policy + risk-vs-uplift contrast** (next — the v2 payoff).
 
 ## Next up (v2)
-1. **S16 (#16)** — `qini.py`: Qini curve + coefficient + uplift-by-decile + true-vs-estimated τ; `QiniReport`; `uplift-eval` CLI. (No course reference — uplift/causal not covered here; standard causal-ML.)
-2. Then S17 uplift policy + risk-vs-uplift contrast → S18 report + docs + v2 capstone.
+1. **S17 (#17)** 👑 — `policy.py` gains `--rank-by uplift|risk`; `benefit_uplift(x)=τ(x)·CLTV−offer_cost`; contrast report (uplift vs risk at equal budget: extra retained value + sleeping dogs avoided). The money slice.
+2. Then S18 report + docs (Qini + uplift-vs-risk charts) + v2 capstone E2E.
 3. *(Optional)* pre-public **history cleanup** (see standing constraints in memory).
 
 ## Deferred
