@@ -3,7 +3,7 @@
 ## Done
 - Setup complete: `churnpilot` package, `.venv` (Python 3.11.15), deps installed, verified green (`pytest` + `churnpilot version`).
 - Private GitHub repo `danielamendirichaga/churnpilot` created + pushed (main tracks origin/main).
-- **Planning — grilling complete.** Full design pressure-tested against the prior work reference and established ML practice. All decisions in **`docs/DESIGN_BRIEF.md`**.
+- **Planning — grilling complete.** Full design pressure-tested against established ML and software practice. All decisions in **`docs/DESIGN_BRIEF.md`**.
 - **Planning — PRD complete.** `docs/context.md`, `docs/ADRs.md` (10 ADRs), `docs/PRD.md` (3 layers, 12 user stories, functional requirements, 13-slice v1 breakdown with traceability).
 - **GitHub issues #1–#13 created** (one per slice S1–S13, label `v1-slice`).
 - **S1 (#1) — Config + `init` — DONE.** `churn.yaml` Pydantic schema (`ChurnConfig`/`SourceConfig`/`ColumnMap`), `load_config` (graceful `ConfigError`), `init` command + template. Added `pydantic`/`types-PyYAML` deps + `[tool.mypy]` (pydantic plugin). Verified: ruff + mypy clean, 14 tests green, `churnpilot init` round-trips.

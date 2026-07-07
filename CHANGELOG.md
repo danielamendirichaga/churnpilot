@@ -9,7 +9,7 @@
 - Initialized git; created private GitHub repo `danielamendirichaga/churnpilot` and pushed the initial commit.
 
 ## 2026-07-03 — Planning: design brief (grilling complete)
-- Ran a full grilling session; pressure-tested the design against the prior work reference and established ML practice.
+- Ran a full grilling session; pressure-tested the design against established ML and software practice.
 - Captured every decision in `docs/DESIGN_BRIEF.md` (domain, panel data model, synthetic generator spec, split/leakage, model menu + EDA-driven choice, metrics, cost-based policy, medium contract layer, agent behavior, v1/v1.1/v2 scope).
 - Next: `/to-prd` from the design brief.
 
@@ -65,7 +65,7 @@
 - `tests/test_model.py` (+6 → 88 total): early-stopping panel(time)/snapshot(stratified) inner-val, best_iteration bounds, mutual-exclusion errors, CLI leakage warning. ruff + mypy clean.
 
 ## 2026-07-07 — Docs pass: public-repo readiness
-- Rewrote `README.md` as a real public front page: the idea + architecture diagram, a real end-to-end quickstart, highlights, docs links, and a **Provenance** section (clean-room/original, synthetic-only, inspired-not-copied from prior work).
+- Rewrote `README.md` as a real public front page: the idea + architecture diagram, a real end-to-end quickstart, highlights, docs links, and a **Provenance** section (clean-room/original, synthetic-only).
 - Added `LICENSE` (MIT).
 - De-staled `AGENTS.md` (accurate key-files map + command list + build order with ✅), `cli.py`/`WORKFLOW.md` build-order strings (added `compare`), `STATUS.md` (date + removed resolved blocker), `DESIGN_BRIEF.md` (deps note resolved).
 - Corrected "logistic (L1/L2)" → "(L1)" in PRD/ADRs/DESIGN_BRIEF to match the implementation; added an S1–S7 progress note to the PRD build plan.

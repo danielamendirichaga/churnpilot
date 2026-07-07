@@ -14,7 +14,7 @@ policy, watching for drift) are exactly where an AI copilot helps most.
 
 The AI agent does **judgment and explanation**; a deterministic, unit-tested Python CLI does
 **all compute**; typed artifacts with lineage are the **contract** between them. Single-agent,
-human-in-the-loop. (Re-versioned from the prior work pattern into churn.)
+human-in-the-loop.
 
 ## Goals
 

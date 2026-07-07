@@ -2,8 +2,8 @@
 
 Output of the grilling session. This is the raw material `/to-prd` formalizes into
 `PRD.md` (three layers: ML engine / contract / agent behavior), ADRs, user stories, and
-a slice breakdown. Every decision below was pressure-tested against the prior work
-reference and established ML practice.
+a slice breakdown. Every decision below was pressure-tested against established ML and
+software-engineering practice.
 
 ---
 
