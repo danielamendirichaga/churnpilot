@@ -1,0 +1,83 @@
+# churnpilot — Architecture Decision Records
+
+Short, numbered records of the load-bearing calls. Each: context → decision → consequences.
+Full rationale lives in `DESIGN_BRIEF.md`; these are the "why" an interviewer will probe.
+
+---
+
+## ADR-001 — Single agent, no multi-agent orchestration
+**Context:** the pipeline is a sequential workflow (generate → … → monitor).
+**Decision:** one agent drives a tested CLI; no multi-agent coordination.
+**Consequences:** simpler, cheaper, defensible; correct for a linear pipeline. Optional future
+upgrade (a critic/verifier agent, or parallel policy-scenario agents) is parked, not built.
+
+## ADR-002 — The agent never computes numbers
+**Context:** an LLM "eyeballing" a statistic can't be audited or unit-tested.
+**Decision:** all compute lives in deterministic, tested Python (the CLI); the agent only
+decides, explains, and invokes commands.
+**Consequences:** reproducibility + testability; the agent reads typed artifact fields, not
+free-text. This *is* the pattern being demonstrated.
+
+## ADR-003 — Panel data model with graceful single-snapshot support
+**Context:** churn is a recurring monthly decision (panel), but most free real datasets (Telco)
+are single-snapshot and dateless.
+**Decision:** synthetic data is panel (subscriber-month); the tool detects a `date_col` from
+config — present → panel path (time-split + drift); absent → snapshot path (stratified split;
+drift/time-split skip gracefully).
+**Consequences:** full pipeline on synthetic data; core pipeline still works on real snapshot
+data. Embodies "config-driven" + "validate & fail gracefully."
+
+## ADR-004 — Time-aware split is the default; entity-leakage guard
+**Context:** random row-wise splits on panel data leak entities (same subscriber in train+test)
+→ memorization → production collapse.
+**Decision:** `split` defaults to `time` (out-of-time); offers `grouped` (cold-start question)
+and `random` (kept *because it's the tempting-wrong one* — the teaching demo). A guard asserts
+row-level disjointness on `(subscriber_id, observation_month)` + temporal ordering.
+**Consequences:** honest evaluation by default; the `random`-vs-`time` metric gap is a teaching
+artifact. Note: credit-lab's "disjoint on `application_id`" guard doesn't transfer (subscribers recur).
+
+## ADR-005 — Bounded model menu + EDA-driven agent choice + baseline floor + compare
+**Context:** blindly always using one model is poor practice; EDA should inform model choice.
+**Decision:** a capped menu (logistic L1/L2, pruned tree, random forest, XGBoost). The agent
+recommends a family from EDA (human decides); a baseline floor is always run; `compare` fits
+the shortlist and ranks on held-out **stability** ("select on stability, not just peak AUC").
+**Consequences:** rigorous, defensible selection; not a hardcoded model.
+
+## ADR-006 — Course-grounded modeling stack
+**Context:** the design used L1-logistic, XGBoost (GridSearchCV, early
+stopping), SMOTE, leakage-safe pipelines, and cost-based thresholds.
+**Decision:** adopt that stack; **add probability calibration** (isotonic) which the course
+relied on implicitly but never checked.
+**Consequences:** the author can defend every technique from first principles; calibration fills a
+genuine gap.
+
+## ADR-007 — Union metric pack; headline top-decile lift + PR-AUC
+**Decision:** report both conventions — precision/recall/F1 + log-loss (course) **and**
+KS/PSI/rank-order/lift + calibration (credit-lab). Headline for a targeting problem = top-decile
+lift + PR-AUC.
+**Consequences:** breadth + a churn-appropriate primary metric; more to implement, but the
+metric core is reusable and testable.
+
+## ADR-008 — Cost-based policy; fixed save_rate in v1; uplift deferred to v2
+**Context:** the policy = whom to save under a budget. True incrementality needs uplift, which
+needs a treatment/control experiment absent from v1 data (and absent from the author's course).
+**Decision:** v1 uses `benefit(x)=save_rate·P(churn)·CLTV − offer_cost` with a **fixed
+`save_rate`** (stated honestly). v2 replaces it with per-customer uplift `τ(x)` — requiring a
+**simulated A/B test** in the generator + Qini evaluation.
+**Consequences:** v1 ships a complete, defensible policy; uplift is a focused, high-signal v2
+differentiator (genuine new learning for Research/Applied Scientist roles).
+
+## ADR-009 — Medium contract tier
+**Context:** target roles (DS/Research/Applied Scientist) reward reproducibility, not platform
+governance.
+**Decision:** 5 Pydantic-typed artifacts with `parent_sha256` lineage + JSON sidecars. **Skip**
+JSON-Schema-export + CI-sync, per-artifact versioning, and a `validate-artifact` walker.
+**Consequences:** demonstrates "typed artifacts + lineage = contract" without production
+plumbing; heavy tier remains a clean future bolt-on if MLOps roles are added.
+
+## ADR-010 — Clean-room, synthetic-only data; branded "Netflix-style streaming"
+**Decision:** all data generated by a seeded generator; no real/PII data in the repo. The world
+is a relatable streaming subscription. Real datasets (Telco/KKBox) are optional, external,
+never committed.
+**Consequences:** safe, reproducible, legible narrative; controllable flaws (drift, leakage,
+imbalance, missingness) for teaching.

@@ -3,15 +3,16 @@
 ## Done
 - Setup complete: `churnpilot` package, `.venv` (Python 3.11.15), deps installed, verified green (`pytest` + `churnpilot version`).
 - Private GitHub repo `danielamendirichaga/churnpilot` created + pushed (main tracks origin/main).
-- **Planning — grilling complete.** Full design pressure-tested against prior work + established practice (`local-notes/`). All decisions captured in **`docs/DESIGN_BRIEF.md`**.
+- **Planning — grilling complete.** Full design pressure-tested against prior work + established practice (`local-notes/`). All decisions in **`docs/DESIGN_BRIEF.md`**.
+- **Planning — PRD complete.** `docs/context.md`, `docs/ADRs.md` (10 ADRs), `docs/PRD.md` (3 layers, 12 user stories, functional requirements, 13-slice v1 breakdown with traceability).
 
 ## In progress
-- Planning §2.2 — turning the design brief into the PRD.
+- Nothing — ready to slice the PRD into issues.
 
 ## Next up
-1. `/to-prd` — generate `PRD.md` (three layers: ML engine / contract / agent behavior) + `context.md` + ADRs + user stories + slice breakdown, from `docs/DESIGN_BRIEF.md`.
-2. `/to-issue` — one GitHub issue per slice.
-3. Build slice 1: `config` + `init` + `generate` (synthetic Netflix-style panel).
+1. `/to-issue` — one GitHub issue per slice (S1–S13) from `docs/PRD.md` §7.
+2. Build **S1: Config + `init`** (churn.yaml Pydantic schema + loader + template scaffold).
+3. Then S2 `generate`, S3 `source`+`validate`, … per the slice breakdown.
 
 ## Key locked decisions (see docs/DESIGN_BRIEF.md for full detail)
 - Domain: streaming monthly subscription; target `churn_next_30d` (binary, next-cycle).
