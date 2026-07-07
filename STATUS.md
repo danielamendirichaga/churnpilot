@@ -27,6 +27,7 @@
 
 ### v2 — uplift / causal
 - **S14 (#14) — generator treatment simulation — DONE.** `make_panel(treatment=True)` overlays a randomized A/B test: balanced `treated`, heterogeneous `τ(x)` (`_uplift_tau`) spanning all 4 quadrants incl. sleeping dogs (τ<0), monotone-coupled potential outcomes → observed churn = factual; oracle cols (`true_uplift`/counterfactuals) for honest Qini. `feature_columns` guards oracle+`treated` from leaking. `generate --treatment` CLI. Verified: ruff + mypy clean, 126 tests green (v1 untouched); smoke 8k×24 → treated 0.498, ATE +0.037, 8% sleeping dogs.
+- **S15 (#15) — uplift models — DONE.** `uplift.py`: S-learner (treated as feature) + T-learner (two models) over `model.py`; `predict_uplift` = churn-prob reduction; `UpliftCard` (+ τ-recovery corr vs synthetic truth); `train-uplift` CLI + joblib persist. Verified: ruff + mypy clean, 133 tests green; smoke 66k rows → **T-learner recovery corr +0.40 vs S-learner +0.14** (both match ATE; T-learner captures heterogeneity, S-learner shrinks it — the known result).
 
 ## In progress
 - Nothing — **v1 shipped.**
@@ -35,11 +36,11 @@
 - **v2 — uplift / causal (BUILDING).** Design **accepted** (`docs/v2-design-brief.md`); issues **#14–#18** created (`v2-slice`). v1.1 dashboard deferred.
 
 ## Active issue
-- **#15 — S15: uplift models (S-/T-learner)** (next to build).
+- **#16 — S16: Qini / uplift evaluation** (next to build).
 
 ## Next up (v2)
-1. **S15 (#15)** — `uplift.py`: S-learner + T-learner over `model.py` (default logistic); `UpliftCard`; `train-uplift` CLI. Consult course causal material as reference (reimplemented, uncited).
-2. Then S16 Qini eval → S17 uplift policy + contrast → S18 report + docs.
+1. **S16 (#16)** — `qini.py`: Qini curve + coefficient + uplift-by-decile + true-vs-estimated τ; `QiniReport`; `uplift-eval` CLI. (No course reference — uplift/causal not covered here; standard causal-ML.)
+2. Then S17 uplift policy + risk-vs-uplift contrast → S18 report + docs + v2 capstone.
 3. *(Optional)* pre-public **history cleanup** (see standing constraints in memory).
 
 ## Deferred

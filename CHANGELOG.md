@@ -116,3 +116,9 @@
 - `churnpilot/cli.py`: `generate --treatment` flag.
 - `tests/test_treatment.py` (8): v1 frame unchanged when off; balanced feature-independent randomization; heterogeneous τ with sleeping dogs; uplift ≠ risk (both signs among would-be churners); observed = factual arm; ATE ≈ mean(true_uplift) and > 0; oracle/treated excluded from features. Full suite **126 green**; ruff + mypy clean.
 - Smoke: 8k×24 `--treatment` → treated 0.498, ATE +0.037 churn reduction, 8% sleeping dogs. (Closes #14)
+
+## 2026-07-07 — S15: uplift models (v2 · #15)
+- `churnpilot/uplift.py`: two meta-learners over the v1 stack — **S-learner** (`treated` as a feature) and **T-learner** (separate control/treated models); `predict_uplift(x)` = estimated churn-probability reduction (retention uplift). `UpliftModel` (fit/predict/persist), `UpliftCard` artifact reporting ATE and — when the synthetic `true_uplift` is present — the **τ-recovery correlation** vs ground truth. No causal library; reuses `model.py`'s leakage-safe pipeline. `train_uplift` guards on the `treated` column / learner / base model.
+- `churnpilot/cli.py`: `train-uplift` command (`--learner s|t`, `--model`); refreshed the stale module header to the full v1+v2 command set.
+- `tests/test_uplift.py` (7): T-learner recovers τ (corr > 0.25) and the ATE; ranks persuadables above sleeping dogs; **T-learner beats S-learner on heterogeneity**; requires `treated`; unknown-learner guard; card/lineage; save/load round-trip. Full suite **133 green**; ruff + mypy clean.
+- Smoke (66k rows): T-learner recovery corr **+0.40** vs S-learner **+0.14** (both match ATE +0.040). (Closes #15)

@@ -1,10 +1,8 @@
 """churnpilot command-line interface.
 
-Commands are added one slice at a time, following the build order in WORKFLOW.md:
-generate -> validate -> profile -> metrics -> split -> train -> compare -> evaluate ->
-simulate-policy -> report -> monitor -> dashboard.
-
-Built so far: version, init, generate, validate, profile, metrics, split, train.
+v1 pipeline: init -> generate -> validate -> profile -> metrics -> split -> train ->
+compare -> evaluate -> simulate-policy -> report -> monitor.
+v2 (uplift/causal): generate --treatment -> train-uplift -> (uplift-eval, uplift policy).
 """
 
 from __future__ import annotations
@@ -590,6 +588,57 @@ def monitor(
         typer.echo("  (churnpilot proposes; the DS decides — it never auto-retrains)")
     else:
         typer.echo("  ✔ no significant drift — no retrain needed")
+
+
+@app.command("train-uplift")
+def train_uplift_cmd(
+    data: Path = typer.Option(
+        ..., "--data", help="A/B panel parquet (from `generate --treatment`)."
+    ),
+    config: Path = typer.Option(
+        Path("churn.yaml"), "--config", help="Path to the churn.yaml config."
+    ),
+    learner: str = typer.Option("t", "--learner", help="Meta-learner: s | t."),
+    model: str = typer.Option("logistic", "--model", help="Base model for the learner."),
+    model_out: Path = typer.Option(
+        Path("data/uplift.pkl"), "--model-out", help="Where to persist the fitted uplift model."
+    ),
+    seed: int = typer.Option(42, "--seed", help="RNG seed (deterministic)."),
+) -> None:
+    """Fit an uplift meta-learner (target persuadables) on a randomized A/B panel."""
+    import pandas as pd
+
+    from .config import ConfigError, load_config
+    from .uplift import UpliftError, save_uplift, train_uplift
+
+    try:
+        cfg = load_config(config)
+    except ConfigError as exc:
+        typer.echo(str(exc))
+        raise typer.Exit(code=1) from exc
+
+    df = pd.read_parquet(data)
+    try:
+        um, card = train_uplift(df, cfg, learner=learner, base_model=model, seed=seed)
+    except UpliftError as exc:
+        typer.echo(str(exc))
+        raise typer.Exit(code=1) from exc
+
+    model_out.parent.mkdir(parents=True, exist_ok=True)
+    save_uplift(um, model_out)
+    card.write_json(model_out.with_suffix(".card.json"))
+
+    name = {"s": "S-learner", "t": "T-learner"}[learner]
+    typer.echo(f"{name} ({card.base_model}) on {card.n_train:,} rows → {model_out}")
+    typer.echo(
+        f"  treated {card.n_treated:,} / control {card.n_control:,} | "
+        f"mean predicted uplift {card.ate_hat:+.4f}"
+    )
+    if card.tau_recovery_corr is not None:
+        typer.echo(
+            f"  recovery vs true uplift: corr {card.tau_recovery_corr:+.3f} "
+            "(synthetic ground truth — how well it learned τ)"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover
