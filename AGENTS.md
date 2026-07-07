@@ -28,7 +28,7 @@
 - xgboost needs the OpenMP runtime on macOS: `brew install libomp` (already done on this machine).
 - Time-aware split by date_col is the default — random split is opt-in and wrong for cohorts.
 - Leakage: never feed cancellation-flow / exit-survey fields as features (auto-features INCLUDE them; agent must flag).
-- Calibration (isotonic) is our addition beyond the course; the course used cost-based thresholds (→ S10 policy).
+- Calibration (isotonic) is our addition on top of a cost-based threshold approach (→ S10 policy).
 - Never commit real customer data — synthetic only (data/ is gitignored).
 
 ## Build order (✅ = done)

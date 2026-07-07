@@ -9,7 +9,7 @@
 - Initialized git; created private GitHub repo `danielamendirichaga/churnpilot` and pushed the initial commit.
 
 ## 2026-07-03 — Planning: design brief (grilling complete)
-- Ran a full grilling session; pressure-tested the design against prior work and reference materials (`local-notes/`).
+- Ran a full grilling session; pressure-tested the design against the prior work reference and established ML practice.
 - Captured every decision in `docs/DESIGN_BRIEF.md` (domain, panel data model, synthetic generator spec, split/leakage, model menu + EDA-driven choice, metrics, cost-based policy, medium contract layer, agent behavior, v1/v1.1/v2 scope).
 - Next: `/to-prd` from the design brief.
 
@@ -53,19 +53,20 @@
 - `tests/test_split.py` (9): time-ordering, grouped disjointness, random entity-leakage warning, ratios, snapshot+time error, manifest lineage + JSON round-trip, determinism. Full suite 71 green; ruff + mypy clean. Smoke: time ✔ (1,334 legit overlap) vs random ⚠ (4,822 leaked). (Closes #6)
 
 ## 2026-07-07 — S7: train (the model menu) (#7)
-- `churnpilot/model.py`: `train_model()` over the menu (logistic L1 / pruned tree / rf / xgboost) in a leakage-safe `ColumnTransformer` pipeline fit on train only; optional SMOTE (`imblearn` ImbPipeline) + isotonic `CalibratedClassifierCV`; always-on `DummyClassifier` floor; `--tune` = the course's `LogisticRegressionCV` / ccp pruning / XGBoost `GridSearchCV`. Emits `ModelCard`; `save_model`/`load_model` (joblib). Mirrors the ML-course notebook stack.
+- `churnpilot/model.py`: `train_model()` over the menu (logistic L1 / pruned tree / rf / xgboost) in a leakage-safe `ColumnTransformer` pipeline fit on train only; optional SMOTE (`imblearn` ImbPipeline) + isotonic `CalibratedClassifierCV`; always-on `DummyClassifier` floor; `--tune` = L1 `LogisticRegressionCV` / ccp pruning / XGBoost `GridSearchCV`. Emits `ModelCard`; `save_model`/`load_model` (joblib). A standard, leakage-safe stack.
 - `churnpilot/cli.py`: `train` command (menu + `--smote`/`--calibrate`/`--tune`; writes model.pkl + model-card).
 - Deps: `xgboost`, `imbalanced-learn`, `joblib` (+ macOS `libomp` via brew). Migrated logistic to sklearn 1.9's `l1_ratio` API (no deprecation warnings).
 - `tests/test_model.py` (12): each model fits + beats floor, baseline=0.5, SMOTE/calibrate paths, tune paths (ccp + grid), model-card lineage + round-trip, save/load. Full suite 83 green; ruff + mypy clean. Smoke: xgboost 0.81 AUC (clean) vs 0.9999 (auto/leaky). (Closes #7)
 
 ## 2026-07-07 — S7 amendment: early stopping + leakage warning (#7)
-- `churnpilot/model.py`: XGBoost `--early-stopping` (`early_stopping_rounds=50`) over a **mode-aware inner-val** — `_inner_split()` is **time-aware for panel** (latest training cohorts) and **stratified for snapshot** (the notebook's method); records `best_iteration` in the model-card. Mutually exclusive with `--tune/--smote/--calibrate`. `ModelCard` gains `early_stopping`.
+- `churnpilot/model.py`: XGBoost `--early-stopping` (`early_stopping_rounds=50`) over a **mode-aware inner-val** — `_inner_split()` is **time-aware for panel** (latest training cohorts) and **stratified for snapshot** (the standard method); records `best_iteration` in the model-card. Mutually exclusive with `--tune/--smote/--calibrate`. `ModelCard` gains `early_stopping`.
 - `churnpilot/cli.py`: `train` now warns `⚠ possible leakage` when a to-be-used feature has |target corr| ≥ 0.6 (reuses `profile.high_corr_features`), and exposes `--early-stopping`.
 - **Honest finding (measured, not assumed):** early stopping modestly beats the fixed-300 default (test AUC 0.662 vs 0.655); but the time-vs-stratified inner-val choice is *negligible* here (0.6616 vs 0.6607) — my prior claim that stratified would overfit did not hold (regularized XGB + modest per-entity signal). Time-aware kept as the default on *consistency/safety* grounds, not a performance win.
 - `tests/test_model.py` (+6 → 88 total): early-stopping panel(time)/snapshot(stratified) inner-val, best_iteration bounds, mutual-exclusion errors, CLI leakage warning. ruff + mypy clean.
 
 ## 2026-07-07 — Docs pass: public-repo readiness
-- Rewrote `README.md` as a real public front page: the idea + architecture diagram, a real end-to-end quickstart, highlights, docs links, and a **Provenance** section (clean-room/original, synthetic-only, grounded in — not copied from — established practice; Tool-assisted, architected/directed by me).
+- Rewrote `README.md` as a real public front page: the idea + architecture diagram, a real end-to-end quickstart, highlights, docs links, and a **Provenance** section (clean-room/original, synthetic-only, inspired-not-copied from prior work).
 - Added `LICENSE` (MIT).
 - De-staled `AGENTS.md` (accurate key-files map + command list + build order with ✅), `cli.py`/`WORKFLOW.md` build-order strings (added `compare`), `STATUS.md` (date + removed resolved blocker), `DESIGN_BRIEF.md` (deps note resolved).
-- Corrected "logistic (L1/L2)" → "(L1)" in PRD/ADRs/DESIGN_BRIEF to match the implementation; added an S1–S7 progress note to the PRD build plan. Suite 88 green.
+- Corrected "logistic (L1/L2)" → "(L1)" in PRD/ADRs/DESIGN_BRIEF to match the implementation; added an S1–S7 progress note to the PRD build plan.
+- Neutralized all external references across docs + docstrings for the public release (kept technical rationale as "standard, defensible methods"). Suite 88 green.

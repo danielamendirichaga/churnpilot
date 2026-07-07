@@ -43,16 +43,17 @@ recommends a family from EDA (human decides); a baseline floor is always run; `c
 the shortlist and ranks on held-out **stability** ("select on stability, not just peak AUC").
 **Consequences:** rigorous, defensible selection; not a hardcoded model.
 
-## ADR-006 — Course-grounded modeling stack
-**Context:** the design used L1-logistic, XGBoost (GridSearchCV, early
-stopping), SMOTE, leakage-safe pipelines, and cost-based thresholds.
-**Decision:** adopt that stack; **add probability calibration** (isotonic) which the course
-relied on implicitly but never checked.
-**Consequences:** the author can defend every technique from first principles; calibration fills a
+## ADR-006 — Modeling stack
+**Context:** L1-logistic, XGBoost (GridSearchCV, early
+stopping), SMOTE, leakage-safe pipelines, and cost-based thresholds are standard, defensible
+methods for imbalanced binary classification.
+**Decision:** adopt that stack; **add probability calibration** (isotonic), which a
+cost-based threshold assumes implicitly but never checks.
+**Consequences:** every technique is standard and defensible; calibration fills a
 genuine gap.
 
 ## ADR-007 — Union metric pack; headline top-decile lift + PR-AUC
-**Decision:** report both conventions — precision/recall/F1 + log-loss (course) **and**
+**Decision:** report both conventions — precision/recall/F1 + log-loss **and**
 KS/PSI/rank-order/lift + calibration (credit-lab). Headline for a targeting problem = top-decile
 lift + PR-AUC.
 **Consequences:** breadth + a churn-appropriate primary metric; more to implement, but the
@@ -60,7 +61,7 @@ metric core is reusable and testable.
 
 ## ADR-008 — Cost-based policy; fixed save_rate in v1; uplift deferred to v2
 **Context:** the policy = whom to save under a budget. True incrementality needs uplift, which
-needs a treatment/control experiment absent from v1 data (and absent from the author's course).
+needs a treatment/control experiment absent from v1 data.
 **Decision:** v1 uses `benefit(x)=save_rate·P(churn)·CLTV − offer_cost` with a **fixed
 `save_rate`** (stated honestly). v2 replaces it with per-customer uplift `τ(x)` — requiring a
 **simulated A/B test** in the generator + Qini evaluation.

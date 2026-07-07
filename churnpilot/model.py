@@ -1,12 +1,12 @@
 """Model training — the bounded menu, in a leakage-safe pipeline, with a baseline floor.
 
-Mirrors the author's established practice stack (see ``local-notes/``): a leakage-safe
+A standard, leakage-safe modeling stack: a
 ``ColumnTransformer`` fit on train only, L1 ``LogisticRegressionCV``, ccp-pruned trees, and
 XGBoost tuned by ``GridSearchCV`` + ``StratifiedKFold`` — plus optional SMOTE (``imblearn``,
-train-folds only) and **isotonic calibration** (the piece the course relied on but never did).
+train-folds only) and **isotonic calibration** (the piece a cost-based threshold assumes but never verifies).
 
 Menu: ``logistic`` (L1) · ``tree`` (pruned) · ``rf`` (bagging) · ``xgboost`` (boosting).
-Default = fast fixed hyperparameters; ``--tune`` runs the course's search. A majority-class
+Default = fast fixed hyperparameters; ``--tune`` runs the standard search. A majority-class
 baseline floor is always reported. Emits a :class:`ModelCard` artifact with lineage.
 
 This module is allowed to import scikit-learn / xgboost (the tested metric core is not).
@@ -115,7 +115,7 @@ def _estimator(model: str, seed: int, tune: bool):
     if model == "logistic":
         from sklearn.linear_model import LogisticRegression, LogisticRegressionCV
 
-        if tune:  # the course's L1 LogisticRegressionCV (l1_ratios=[1.0] = pure L1)
+        if tune:  # L1 LogisticRegressionCV (l1_ratios=[1.0] = pure L1)
             return LogisticRegressionCV(
                 Cs=np.logspace(-3, 3, 7),
                 cv=5,
@@ -167,7 +167,7 @@ def _assemble(pre: ColumnTransformer, est, smote: bool, seed: int):
 
 
 def _fit_tree(pre: ColumnTransformer, X: pd.DataFrame, y: np.ndarray, seed: int, tune: bool):
-    """Decision tree; ``--tune`` = cost-complexity pruning (the course's method)."""
+    """Decision tree; ``--tune`` = cost-complexity pruning (the standard method)."""
     from sklearn.model_selection import cross_val_score
     from sklearn.tree import DecisionTreeClassifier
 
@@ -200,7 +200,7 @@ def _fit_tree(pre: ColumnTransformer, X: pd.DataFrame, y: np.ndarray, seed: int,
 
 
 def _tune_xgb(pre: ColumnTransformer, X: pd.DataFrame, y: np.ndarray, seed: int):
-    """XGBoost via GridSearchCV + StratifiedKFold (the course's approach, smaller grid)."""
+    """XGBoost via GridSearchCV + StratifiedKFold (a standard approach, smaller grid)."""
     from sklearn.model_selection import GridSearchCV, StratifiedKFold
     from xgboost import XGBClassifier
 
@@ -240,7 +240,7 @@ def _inner_split(train_df: pd.DataFrame, config: ChurnConfig, seed: int):
     * panel (date_col present) → **time-aware**: the latest training cohorts are the inner-val,
       so early stopping never selects on memorised individuals (a plain random split leaks the
       same subscriber into inner-train and inner-val on panel data).
-    * snapshot (no date_col) → **stratified** random (the notebook's method — correct where
+    * snapshot (no date_col) → **stratified** random (the standard method — correct where
       there are no entities to leak).
     """
     cols = config.columns

@@ -3,7 +3,7 @@
 Output of the grilling session. This is the raw material `/to-prd` formalizes into
 `PRD.md` (three layers: ML engine / contract / agent behavior), ADRs, user stories, and
 a slice breakdown. Every decision below was pressure-tested against the prior work
-reference and reference materials (see `local-notes/`).
+reference and established ML practice.
 
 ---
 
@@ -33,8 +33,8 @@ typed artifacts with lineage = the contract. Single-agent, human-in-the-loop.
 | 5 | Real datasets | Synthetic = "Netflix-style" (full pipeline); Telco = real snapshot smoke test (Bank Churn alt); KKBox = real panel option |
 | 6 | Model menu (capped) | logistic (L1), pruned decision tree, random forest, XGBoost |
 | 7 | Model choice | **EDA-driven agent recommendation** over the menu + always-on baseline floor + `compare` step |
-| 8 | Imbalance | SMOTE option (train-folds only) **+** cost-based threshold (course method) |
-| 9 | Calibration | isotonic (`CalibratedClassifierCV`) + calibration check in `evaluate` (fills a course gap) |
+| 8 | Imbalance | SMOTE option (train-folds only) **+** cost-based threshold (standard method) |
+| 9 | Calibration | isotonic (`CalibratedClassifierCV`) + calibration check in `evaluate` (fills a calibration gap) |
 | 10 | Metrics | Union: precision/recall/F1 + log-loss **and** KS/PSI/rank-order/lift + calibration. Headline = **top-decile lift + PR-AUC** |
 | 11 | Split | modes `time` (default) / `grouped` / `random`; row-level leakage guard |
 | 12 | Policy | `benefit(x)=save_rate·P(churn)·CLTV − offer_cost`; budget = N offers or $; **fixed save_rate in v1** |
@@ -94,10 +94,10 @@ One row = one active subscriber-month. Deterministic (seeded). Markers: 🎯 dri
 - **Menu (capped):** `logistic` (L1 via `LogisticRegressionCV`, C tuned by CV → embedded feature selection) · `decision-tree` (pruned via `ccp_alpha`, interpretability/visualization) · `random-forest` (bagging, robust low-tuning) · `xgboost` (boosting, likely top performer, `GridSearchCV` + `StratifiedKFold` + early stopping).
 - **Baseline floor:** always run (majority-class / simple logistic) — everything must beat it. Not a "choice," a reference.
 - **Model choice = EDA-driven agent recommendation** over the menu (agent reads `profile` output, recommends a family *with reasons*, DS decides), then `compare` fits the shortlist and **ranks on held-out + stability** ("select on stability, not just peak AUC": small train→test drop, low score-PSI).
-- **Course-grounded (from `local-notes/`):**
+- **Standard, defensible methods:**
   - Leakage-safe preprocessing by construction — `ColumnTransformer` + `Pipeline`, imputers/encoders/scalers **fit on train folds only**.
-  - **SMOTE** option via `imblearn` ImbPipeline (oversample train folds only). Course caveat honored: SMOTE mainly ↑recall at ↓precision; often rivaled by cost-based thresholds — so we support both and let the agent compare.
-  - **Calibration** (isotonic) — added on top of the course (which relied on calibrated probabilities but never checked them).
+  - **SMOTE** option via `imblearn` ImbPipeline (oversample train folds only). Standard caveat honored: SMOTE mainly ↑recall at ↓precision; often rivaled by cost-based thresholds — so we support both and let the agent compare.
+  - **Calibration** (isotonic) — added because the cost-based threshold assumes calibrated probabilities.
 - **Convention:** higher score = higher churn risk (documented — "half of scorecard bugs are a flipped sign").
 
 ---
@@ -105,7 +105,7 @@ One row = one active subscriber-month. Deterministic (seeded). Markers: 🎯 dri
 ## 6. Metrics (`evaluate`)
 
 Union of the two conventions:
-- **Course:** precision / recall / F1, log-loss, confusion matrix, cost-based threshold.
+- **Standard classification:** precision / recall / F1, log-loss, confusion matrix, cost-based threshold.
 - **Credit-lab:** KS (decile-table), PSI, rank-order-breaks, lift/gain, calibration; score-PSI train→test; metric drops.
 - **Headline for churn targeting:** **top-decile lift + PR-AUC** (AUC is table stakes).
 - Per-segment slices (e.g. by `plan_tier`, `region`).
@@ -114,7 +114,7 @@ Union of the two conventions:
 
 ## 7. Policy (`simulate-policy`) — the crown jewel
 
-- Grounded in the user's cost-based expected-loss method (LogitChurn assignment), extended from "pick a threshold" to "pick whom to save under a budget."
+- Grounded in a standard cost-based expected-loss method, extended from "pick a threshold" to "pick whom to save under a budget."
 - **Formula:** `benefit(x) = save_rate · P(churn|x) · CLTV(x) − offer_cost`. Rank subscribers by `benefit`, target top ones until **budget** exhausted (budget = **N offers** or **$ spend**).
 - **Output:** targeted set, expected retained value, expected spend, trade-off curve (retained value vs. budget), by segment.
 - **v1 assumption:** `save_rate` is a **single configurable constant**, stated honestly in the report.

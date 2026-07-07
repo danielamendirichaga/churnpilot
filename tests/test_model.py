@@ -104,7 +104,7 @@ def test_save_load_roundtrip(train_df, tmp_path):
 
 
 def test_tune_paths_small(train_df):
-    # Exercise the course's search on tree (ccp) + xgboost (grid) on small data.
+    # Exercise the standard search on tree (ccp) + xgboost (grid) on small data.
     _, tree_card = train_model(train_df, _cfg(), model="tree", tune=True)
     assert "ccp_alpha" in tree_card.hyperparams
     _, xgb_card = train_model(train_df, _cfg(), model="xgboost", tune=True)
@@ -120,7 +120,7 @@ def test_early_stopping_panel_uses_time_inner_split(train_df):
 
 
 def test_early_stopping_snapshot_uses_stratified(train_df):
-    # A config without date_col → snapshot mode → stratified inner-val (the notebook's method).
+    # A config without date_col → snapshot mode → stratified inner-val (the standard method).
     snap = {k: v for k, v in SCHEMA.items() if k != "date_col"}
     cfg = ChurnConfig.model_validate({"source": {"kind": "synthetic"}, "schema": snap})
     _, card = train_model(train_df, cfg, model="xgboost", early_stopping=True)
