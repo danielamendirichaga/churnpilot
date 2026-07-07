@@ -28,13 +28,16 @@
 ## In progress
 - Nothing — **v1 shipped.**
 
-## Active issue
-- None. (v1 done; #1–#13 all closed.)
+## Active track
+- **v2 — uplift / causal (PLANNING).** Owner dropped v1.1 (Streamlit dashboard) in favor of the causal-inference differentiator. Grilling the v2 design before building.
 
-## Next up (post-v1)
-1. **v1.1 — S14 Streamlit `dashboard`** (`churnpilot/app.py`): interactive policy-budget sliders over the same tested `charts.py`.
-2. **v2 — uplift/causal**: a simulated A/B-test hook in the generator + uplift models + Qini eval + uplift-based policy (the depth differentiator).
+## Next up (v2)
+1. **Grill the v2 design** → PRD/slices: (a) treatment simulation in the generator, (b) uplift learners, (c) Qini/uplift eval, (d) uplift-based policy + risk-vs-uplift contrast, (e) scope boundary (seasonality? real A/B data?).
+2. Build verified slices per that plan. Consult course causal material as reference (reimplemented, uncited).
 3. *(Optional)* pre-public **history cleanup** (see standing constraints in memory).
+
+## Deferred
+- **v1.1 — Streamlit `dashboard`** (`churnpilot/app.py`): interactive policy sliders over `charts.py`. Dropped for now in favor of v2; revisit after.
 
 ## Key locked decisions (see docs/DESIGN_BRIEF.md for full detail)
 - Domain: streaming monthly subscription; target `churn_next_30d` (binary, next-cycle).
