@@ -73,19 +73,13 @@ def generate(
     typer.echo(summarize(df))
 
 
-@app.command()
-def validate(
-    config: Path = typer.Option(
-        Path("churn.yaml"), "--config", help="Path to the churn.yaml config."
-    ),
-) -> None:
-    """Check that the configured dataset is usable by churnpilot (fails gracefully)."""
+def _load(config_path: Path):
+    """Load config + data for a command, exiting cleanly (no traceback) on failure."""
     from .config import ConfigError, load_config
     from .source import SourceError, load_data
-    from .validate import validate as run_validate
 
     try:
-        cfg = load_config(config)
+        cfg = load_config(config_path)
     except ConfigError as exc:
         typer.echo(str(exc))
         raise typer.Exit(code=1) from exc
@@ -94,11 +88,67 @@ def validate(
     except SourceError as exc:
         typer.echo(f"Could not load data: {exc}")
         raise typer.Exit(code=1) from exc
+    return cfg, df
 
+
+@app.command()
+def validate(
+    config: Path = typer.Option(
+        Path("churn.yaml"), "--config", help="Path to the churn.yaml config."
+    ),
+) -> None:
+    """Check that the configured dataset is usable by churnpilot (fails gracefully)."""
+    from .validate import validate as run_validate
+
+    cfg, df = _load(config)
     report = run_validate(df, cfg)
     typer.echo(report.render())
     if not report.ok:
         raise typer.Exit(code=1)
+
+
+@app.command()
+def profile(
+    config: Path = typer.Option(
+        Path("churn.yaml"), "--config", help="Path to the churn.yaml config."
+    ),
+) -> None:
+    """Profile every column of the configured dataset (EDA numbers)."""
+    import pandas as pd
+
+    from .profile import high_corr_features, profile_frame
+
+    cfg, df = _load(config)
+    records = profile_frame(df, cfg)
+    table = pd.DataFrame(records)
+    order = [
+        "column",
+        "role",
+        "null_rate",
+        "n_unique",
+        "target_corr",
+        "mean",
+        "std",
+        "min",
+        "q25",
+        "q50",
+        "q75",
+        "max",
+    ]
+    table = table[[c for c in order if c in table.columns]]
+
+    typer.echo(
+        f"Profile of {len(df):,} rows × {df.shape[1]} columns  (target: {cfg.columns.target_col})"
+    )
+    typer.echo("")
+    with pd.option_context("display.max_columns", None, "display.width", 200):
+        typer.echo(table.to_string(index=False, na_rep=""))
+
+    leaky = high_corr_features(records, threshold=0.5)
+    if leaky:
+        typer.echo("")
+        hits = ", ".join(f"{c} ({v:+.2f})" for c, v in leaky)
+        typer.echo(f"⚠ high target correlation — possible leakage: {hits}")
 
 
 if __name__ == "__main__":  # pragma: no cover

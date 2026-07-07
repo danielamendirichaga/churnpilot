@@ -9,16 +9,17 @@
 - **S1 (#1) — Config + `init` — DONE.** `churn.yaml` Pydantic schema (`ChurnConfig`/`SourceConfig`/`ColumnMap`), `load_config` (graceful `ConfigError`), `init` command + template. Added `pydantic`/`types-PyYAML` deps + `[tool.mypy]` (pydantic plugin). Verified: ruff + mypy clean, 14 tests green, `churnpilot init` round-trips.
 - **S2 (#2) — `generate` — DONE.** Deterministic synthetic streaming panel (`churnpilot/generate.py` `make_panel`); 25-col schema + 4 levers (drift/imbalance/missingness/leakage trap) + cltv; `generate` CLI writes parquet + summary. Verified: ruff + mypy clean, 23 tests green; full run 8k×24 = 59,683 rows, churn 0.100, ~1s. Spec: `docs/synthetic-data.md`.
 - **S3 (#3) — `source` + `validate` — DONE.** `source.py` `load_data` (synthetic/file[parquet,csv]/sqlite tested; postgres path present). `validate.py` `validate` → graded `ValidationReport` (✔/⚠/✗), panel-vs-snapshot mode, fails gracefully. `validate` CLI (loads config→data→report, non-zero exit on hard fail). Verified: ruff + mypy clean, 40 tests green; smoke on healthy + broken configs.
+- **S4 (#4) — `profile` — DONE.** `profile.py` `profile_frame` (config-driven roles + null rate + cardinality + numeric stats + numeric-feature target_corr) and `high_corr_features` (leakage hint). `profile` CLI prints the EDA table + a `⚠ possible leakage` line. Shared `_load` helper in cli.py (validate+profile). Verified: ruff + mypy clean, 47 tests green; smoke flags `cancel_flow_visits_30d` at +0.92.
 
 ## In progress
 - Nothing.
 
 ## Active issue
-- **#4 — S4: `profile`** (next to build).
+- **#5 — S5: metric core + `metrics`** (next to build).
 
 ## Next up
-1. Build **S4 (#4): `profile`** — per-column EDA numbers (role, null rate, cardinality, target relationship) the agent reasons over.
-2. Then S5 metric core (#5), S6 `split` (#6), … per `docs/PRD.md` §7.
+1. Build **S5 (#5): metric core** — tested pure functions (KS, PSI, rank-order-breaks, lift/gain, precision/recall/F1, log-loss, calibration) + `metrics` command. numpy/pandas only.
+2. Then S6 `split` (#6), S7 `train` (#7), … per `docs/PRD.md` §7.
 
 ## Key locked decisions (see docs/DESIGN_BRIEF.md for full detail)
 - Domain: streaming monthly subscription; target `churn_next_30d` (binary, next-cycle).

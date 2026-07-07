@@ -35,3 +35,8 @@
 - `churnpilot/validate.py`: `validate(df, config)` → graded `ValidationReport` (✔ pass / ⚠ warn / ✗ fail) covering rows, target (2 classes + positive_value present), panel-vs-snapshot mode, id uniqueness, value_col, features, missingness. Fails gracefully (no traceback).
 - `churnpilot/cli.py`: `validate` command (config → data → report; non-zero exit on hard fail).
 - `tests/test_source.py` (7) + `tests/test_validate.py` (10). Full suite 40 green; ruff + mypy clean. Extended mypy override to `sqlalchemy`. (Closes #3)
+
+## 2026-07-07 — S4: profile (EDA) (#4)
+- `churnpilot/profile.py`: `profile_frame(df, config)` → per-column role (config-driven for id/date/target), null rate, cardinality, numeric summary stats, and numeric-feature `target_corr`; `high_corr_features()` surfaces a leakage hint.
+- `churnpilot/cli.py`: `profile` command (prints the EDA table + a `⚠ possible leakage` line); factored a shared `_load()` config+data helper (reused by `validate`).
+- `tests/test_profile.py` (8): roles, numeric stats, null rates, target-corr signs, and that the leakage hint flags `cancel_flow_visits_30d` (not genuine drivers). Full suite 47 green; ruff + mypy clean. Smoke: leak at +0.92 vs. real drivers ~0.12. (Closes #4)
