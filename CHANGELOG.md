@@ -77,3 +77,9 @@
 - `churnpilot/model.py`: `train_model` return type `object` → `Any` (estimator has `predict_proba`).
 - `tests/test_compare.py` (5): ranking order, performance+stability columns, rf-overfits-more-than-logistic, single-model, determinism. Full suite 93 green; ruff + mypy clean.
 - Smoke: L1 logistic best held-out AUC 0.675 AND most stable (drop +0.012, score-PSI 0.019); rf/xgboost overfit (drop +0.23 / +0.16). (Closes #8)
+
+## 2026-07-07 — S9: evaluate (#9)
+- `churnpilot/evaluate.py`: `evaluate_model()` scores a held-out frame and reports the union metric pack (AUC, PR-AUC, KS, rank-order-breaks, top-decile lift, precision/recall/F1 @threshold, log-loss, ECE), per-segment slices (n / churn_rate / AUC / lift, default by `plan_tier` + `region`), and optional score-PSI vs a reference (drift). Emits an `EvalReport` artifact with lineage; single-class slices report `auc: null` (JSON stays NaN-free). Reuses `metrics` — no new math.
+- `churnpilot/cli.py`: `evaluate` command (`--model`/`--test`/`--reference`/`--threshold`; writes eval-report + prints the scorecard + segments).
+- `tests/test_evaluate.py` (5): full metric pack, per-segment slices, score-PSI with/without reference, artifact lineage + round-trip, missing-feature error. Full suite 98 green; ruff + mypy clean.
+- Smoke: test AUC 0.655 / KS 0.219 / lift 1.92× / ECE 0.013 / score-PSI 0.027; Premium AUC 0.690 vs Standard 0.638; recall @0.5 ≈ 0 (imbalance → motivates the S10 cost-based policy). (Closes #9)

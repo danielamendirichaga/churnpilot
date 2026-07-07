@@ -16,15 +16,17 @@
 
 - **S8 (#8) — `compare` — DONE.** `compare.py` `compare_models` — fits the shortlist on train, scores a holdout, ranks on held-out AUC/KS/lift/PR-AUC **and** stability (train→holdout auc/ks drop, score-PSI) + a `stable` gate flag. `compare` CLI prints the ranked table + names best + most-stable. Reuses `model.py`/`metrics.py`. Verified: ruff + mypy clean, 93 tests green; smoke — L1 logistic best (0.675) *and* most stable (drop +0.012) while rf/xgboost overfit (drop +0.23/+0.16).
 
+- **S9 (#9) — `evaluate` — DONE.** `evaluate.py` `evaluate_model` — scores held-out data, reports the union metric pack (AUC/PR-AUC/KS/rank-order/lift + precision/recall/F1/log-loss/ECE), per-segment slices (plan_tier/region), and optional score-PSI vs a reference; emits `EvalReport` artifact (lineage). `evaluate` CLI. Verified: ruff + mypy clean, 98 tests green; smoke — test AUC 0.655, ECE 0.013, PSI 0.027, Premium AUC 0.690 vs Standard 0.638.
+
 ## In progress
 - Nothing.
 
 ## Active issue
-- **#9 — S9: `evaluate`** (next to build).
+- **#10 — S10: `simulate-policy`** (next to build).
 
 ## Next up
-1. Build **S9 (#9): `evaluate`** — load a model, score held-out data, report the union metric pack + calibration + per-segment slices; emit `eval-report` artifact.
-2. Then S10 `simulate-policy` (#10), S11 `charts`+`report` (#11), … per `docs/PRD.md` §7.
+1. Build **S10 (#10): `simulate-policy`** — `benefit(x)=save_rate·P(churn)·CLTV − offer_cost`, target under a budget (N offers or $), report retained value + trade-off by segment; emit `policy-report` artifact. (The crown jewel; recall @0.5 ≈ 0 → target by expected value, not a naive cutoff.)
+2. Then S11 `charts`+`report` (#11), S12 `monitor` (#12), … per `docs/PRD.md` §7.
 
 ## Key locked decisions (see docs/DESIGN_BRIEF.md for full detail)
 - Domain: streaming monthly subscription; target `churn_next_30d` (binary, next-cycle).

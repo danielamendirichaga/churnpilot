@@ -377,5 +377,70 @@ def compare(
         typer.echo("  ⚠ none passed the stability gate (auc_drop < 0.05 and score-PSI < 0.2)")
 
 
+@app.command()
+def evaluate(
+    model: Path = typer.Option(..., "--model", help="Persisted fitted model (.pkl)."),
+    test: Path = typer.Option(..., "--test", help="Held-out parquet to score."),
+    config: Path = typer.Option(
+        Path("churn.yaml"), "--config", help="Path to the churn.yaml config."
+    ),
+    reference: Path = typer.Option(
+        None, "--reference", help="Optional reference parquet for score-PSI drift."
+    ),
+    threshold: float = typer.Option(0.5, "--threshold", help="Cutoff for precision/recall/F1."),
+    report_out: Path = typer.Option(
+        Path("data/eval-report.json"), "--report-out", help="Where to write the eval-report."
+    ),
+) -> None:
+    """Evaluate a saved model on held-out data — the full metric pack + per-segment + drift."""
+    import pandas as pd
+
+    from .config import ConfigError, load_config
+    from .evaluate import evaluate_model
+    from .model import load_model
+
+    try:
+        cfg = load_config(config)
+    except ConfigError as exc:
+        typer.echo(str(exc))
+        raise typer.Exit(code=1) from exc
+
+    est = load_model(model)
+    test_df = pd.read_parquet(test)
+    ref_df = pd.read_parquet(reference) if reference is not None else None
+    try:
+        report = evaluate_model(est, test_df, cfg, reference_df=ref_df, threshold=threshold)
+    except ValueError as exc:
+        typer.echo(str(exc))
+        raise typer.Exit(code=1) from exc
+
+    report_out.parent.mkdir(parents=True, exist_ok=True)
+    report.write_json(report_out)
+
+    mx = report.metrics
+    typer.echo(f"Held-out evaluation  ({report.n_rows:,} rows) → {report_out}")
+    typer.echo("")
+    typer.echo(
+        f"  AUC {mx['auc']:.4f} | PR-AUC {mx['pr_auc']:.4f} | KS {mx['ks']:.4f} | "
+        f"top-decile lift {mx['top_decile_lift']:.2f}x | rank-order breaks {mx['rank_order_breaks']}"
+    )
+    typer.echo(
+        f"  @{threshold:g}: precision {mx['precision']:.3f} | recall {mx['recall']:.3f} | "
+        f"F1 {mx['f1']:.3f} | log-loss {mx['log_loss']:.4f} | ECE {mx['ece']:.4f}"
+    )
+    if report.score_psi is not None:
+        typer.echo(
+            f"  score-PSI (reference→test): {report.score_psi:.4f}   (<0.1 stable, >0.25 major)"
+        )
+
+    for col, seg in report.segments.items():
+        typer.echo(f"\n  by {col}:")
+        for level, s in seg.items():
+            auc = f"{s['auc']:.3f}" if s["auc"] is not None else "  n/a"
+            typer.echo(
+                f"    {level:<12} n={s['n']:>6,}  churn {s['churn_rate']:.1%}  AUC {auc}  lift {s['lift']:.2f}x"
+            )
+
+
 if __name__ == "__main__":  # pragma: no cover
     app()
