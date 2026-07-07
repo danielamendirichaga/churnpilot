@@ -46,7 +46,7 @@ Before touching anything:
 
 ### 2.1) Idea
 - Capture the raw idea.
-- `/grill-with-docs` — pressure-test the idea against the reference docs.
+- `/grill-with-docs` — pressure-test the idea against established practice.
 - Domain modeling — define core entities and vocabulary
   (**Customer, Cohort, Score, Model, Policy, Offer, DriftReport**).
 

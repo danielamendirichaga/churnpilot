@@ -26,7 +26,7 @@ reports/
 # OS
 .DS_Store
 
-# Local reference material — kept out of the repo (large binaries / third-party content).
+# Local working notes / scratch — kept out of the repo.
 local-notes/
 
 # Local notes / office docs — never commit
