@@ -109,3 +109,61 @@ def test_tune_paths_small(train_df):
     assert "ccp_alpha" in tree_card.hyperparams
     _, xgb_card = train_model(train_df, _cfg(), model="xgboost", tune=True)
     assert {"learning_rate", "max_depth", "n_estimators"} <= set(xgb_card.hyperparams)
+
+
+def test_early_stopping_panel_uses_time_inner_split(train_df):
+    est, card = train_model(train_df, _cfg(), model="xgboost", early_stopping=True)
+    assert card.early_stopping is True
+    assert card.hyperparams["inner_val"] == "time"  # panel → time-aware inner-val
+    assert 1 <= card.hyperparams["best_iteration"] <= card.hyperparams["n_estimators_max"]
+    assert est.predict_proba(train_df[FEATURES])[:, 1].shape[0] == len(train_df)
+
+
+def test_early_stopping_snapshot_uses_stratified(train_df):
+    # A config without date_col → snapshot mode → stratified inner-val (the notebook's method).
+    snap = {k: v for k, v in SCHEMA.items() if k != "date_col"}
+    cfg = ChurnConfig.model_validate({"source": {"kind": "synthetic"}, "schema": snap})
+    _, card = train_model(train_df, cfg, model="xgboost", early_stopping=True)
+    assert card.hyperparams["inner_val"] == "stratified"
+
+
+def test_early_stopping_only_xgboost(train_df):
+    with pytest.raises(ModelError, match="only supported for the xgboost"):
+        train_model(train_df, _cfg(), model="rf", early_stopping=True)
+
+
+def test_early_stopping_excludes_tune(train_df):
+    with pytest.raises(ModelError, match="cannot be combined"):
+        train_model(train_df, _cfg(), model="xgboost", early_stopping=True, tune=True)
+
+
+def test_cli_train_warns_on_leakage(tmp_path, train_df):
+    from typer.testing import CliRunner
+
+    from churnpilot.cli import app
+
+    p = tmp_path / "train.parquet"
+    train_df.to_parquet(p, index=False)
+    cfgp = tmp_path / "churn.yaml"
+    cfgp.write_text(
+        "source:\n  kind: synthetic\n"
+        "schema:\n  id_col: subscriber_id\n  target_col: churn_next_30d\n"
+        "  date_col: observation_month\n  features: auto\n"
+    )
+    result = CliRunner().invoke(
+        app,
+        [
+            "train",
+            "--train",
+            str(p),
+            "--config",
+            str(cfgp),
+            "--model",
+            "logistic",
+            "--model-out",
+            str(tmp_path / "m.pkl"),
+        ],
+    )
+    assert result.exit_code == 0
+    assert "leakage" in result.output
+    assert "cancel_flow_visits_30d" in result.output

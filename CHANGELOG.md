@@ -57,3 +57,9 @@
 - `churnpilot/cli.py`: `train` command (menu + `--smote`/`--calibrate`/`--tune`; writes model.pkl + model-card).
 - Deps: `xgboost`, `imbalanced-learn`, `joblib` (+ macOS `libomp` via brew). Migrated logistic to sklearn 1.9's `l1_ratio` API (no deprecation warnings).
 - `tests/test_model.py` (12): each model fits + beats floor, baseline=0.5, SMOTE/calibrate paths, tune paths (ccp + grid), model-card lineage + round-trip, save/load. Full suite 83 green; ruff + mypy clean. Smoke: xgboost 0.81 AUC (clean) vs 0.9999 (auto/leaky). (Closes #7)
+
+## 2026-07-07 — S7 amendment: early stopping + leakage warning (#7)
+- `churnpilot/model.py`: XGBoost `--early-stopping` (`early_stopping_rounds=50`) over a **mode-aware inner-val** — `_inner_split()` is **time-aware for panel** (latest training cohorts) and **stratified for snapshot** (the notebook's method); records `best_iteration` in the model-card. Mutually exclusive with `--tune/--smote/--calibrate`. `ModelCard` gains `early_stopping`.
+- `churnpilot/cli.py`: `train` now warns `⚠ possible leakage` when a to-be-used feature has |target corr| ≥ 0.6 (reuses `profile.high_corr_features`), and exposes `--early-stopping`.
+- **Honest finding (measured, not assumed):** early stopping modestly beats the fixed-300 default (test AUC 0.662 vs 0.655); but the time-vs-stratified inner-val choice is *negligible* here (0.6616 vs 0.6607) — my prior claim that stratified would overfit did not hold (regularized XGB + modest per-entity signal). Time-aware kept as the default on *consistency/safety* grounds, not a performance win.
+- `tests/test_model.py` (+6 → 88 total): early-stopping panel(time)/snapshot(stratified) inner-val, best_iteration bounds, mutual-exclusion errors, CLI leakage warning. ruff + mypy clean.

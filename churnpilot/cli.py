@@ -251,13 +251,17 @@ def train(
     smote: bool = typer.Option(False, "--smote", help="Oversample the minority class (SMOTE)."),
     calibrate: bool = typer.Option(False, "--calibrate", help="Isotonic probability calibration."),
     tune: bool = typer.Option(False, "--tune", help="Run the hyperparameter search."),
+    early_stopping: bool = typer.Option(
+        False, "--early-stopping", help="XGBoost early stopping (mode-aware inner-val)."
+    ),
     seed: int = typer.Option(42, "--seed", help="RNG seed."),
 ) -> None:
     """Fit a model from the menu (leakage-safe) and report it against the baseline floor."""
     import pandas as pd
 
     from .config import ConfigError, load_config
-    from .model import ModelError, save_model, train_model
+    from .model import ModelError, feature_columns, save_model, train_model
+    from .profile import high_corr_features, profile_frame
 
     try:
         cfg = load_config(config)
@@ -265,9 +269,27 @@ def train(
         typer.echo(str(exc))
         raise typer.Exit(code=1) from exc
     df = pd.read_parquet(train)
+
+    # Safety: warn if a feature about to be used looks like leakage (extreme target corr).
+    numeric, categorical = feature_columns(df, cfg)
+    used = set(numeric) | set(categorical)
+    leaky = [
+        (c, v) for c, v in high_corr_features(profile_frame(df, cfg), threshold=0.6) if c in used
+    ]
+    if leaky:
+        hits = ", ".join(f"{c} (|corr|={abs(v):.2f})" for c, v in leaky)
+        typer.echo(f"⚠ possible leakage in features: {hits} — consider excluding it.\n")
+
     try:
         estimator, card = train_model(
-            df, cfg, model=model, smote=smote, calibrate=calibrate, tune=tune, seed=seed
+            df,
+            cfg,
+            model=model,
+            smote=smote,
+            calibrate=calibrate,
+            tune=tune,
+            early_stopping=early_stopping,
+            seed=seed,
         )
     except ModelError as exc:
         typer.echo(str(exc))
@@ -278,7 +300,14 @@ def train(
     card.write_json(model_out.with_suffix(".card.json"))
 
     tags = "".join(
-        t for t, on in ((" +smote", smote), (" +calibrated", calibrate), (" +tuned", tune)) if on
+        t
+        for t, on in (
+            (" +smote", smote),
+            (" +calibrated", calibrate),
+            (" +tuned", tune),
+            (" +early-stop", early_stopping),
+        )
+        if on
     )
     tm, bm = card.train_metrics, card.baseline_metrics
     typer.echo(

@@ -47,6 +47,7 @@ class ModelCard(ArtifactBase):
     tuned: bool
     smote: bool
     calibrated: bool
+    early_stopping: bool = False
     n_features: int
     features: list[str]
     hyperparams: dict
@@ -233,6 +234,68 @@ def _tune_xgb(pre: ColumnTransformer, X: pd.DataFrame, y: np.ndarray, seed: int)
     return search.best_estimator_, hp
 
 
+def _inner_split(train_df: pd.DataFrame, config: ChurnConfig, seed: int):
+    """(inner_train, inner_val) boolean masks that MIRROR the outer split mode:
+
+    * panel (date_col present) → **time-aware**: the latest training cohorts are the inner-val,
+      so early stopping never selects on memorised individuals (a plain random split leaks the
+      same subscriber into inner-train and inner-val on panel data).
+    * snapshot (no date_col) → **stratified** random (the notebook's method — correct where
+      there are no entities to leak).
+    """
+    cols = config.columns
+    n = len(train_df)
+    if cols.date_col and cols.date_col in train_df.columns:
+        dates = sorted(train_df[cols.date_col].unique())
+        n_val = max(1, round(0.2 * len(dates)))
+        val_mask = train_df[cols.date_col].isin(set(dates[-n_val:])).to_numpy()
+    else:
+        from sklearn.model_selection import train_test_split
+
+        y = (train_df[cols.target_col] == cols.positive_value).astype(int).to_numpy()
+        _, val_idx = train_test_split(np.arange(n), test_size=0.2, stratify=y, random_state=seed)
+        val_mask = np.zeros(n, dtype=bool)
+        val_mask[val_idx] = True
+    return ~val_mask, val_mask
+
+
+def _fit_xgb_es(pre, train_df, config, numeric, categorical, seed):
+    """XGBoost with early stopping over a mode-aware (leakage-free on panel) inner-val."""
+    from xgboost import XGBClassifier
+
+    cols = config.columns
+    feats = numeric + categorical
+    x = train_df[feats]
+    y = (train_df[cols.target_col] == cols.positive_value).astype(int).to_numpy()
+    inner_tr, inner_val = _inner_split(train_df, config, seed)
+    x_tr = pre.fit_transform(x[inner_tr], y[inner_tr])
+    x_val = pre.transform(x[inner_val])
+    xgb = XGBClassifier(
+        n_estimators=2000,
+        learning_rate=0.05,
+        max_depth=4,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        objective="binary:logistic",
+        eval_metric="logloss",
+        early_stopping_rounds=50,
+        tree_method="hist",
+        random_state=seed,
+        n_jobs=-1,
+        verbosity=0,
+    )
+    xgb.fit(x_tr, y[inner_tr], eval_set=[(x_val, y[inner_val])], verbose=False)
+    inner_mode = "time" if (cols.date_col and cols.date_col in train_df.columns) else "stratified"
+    hp = {
+        "n_estimators_max": 2000,
+        "best_iteration": int(xgb.best_iteration),
+        "learning_rate": 0.05,
+        "max_depth": 4,
+        "inner_val": inner_mode,
+    }
+    return SkPipeline([("preprocess", pre), ("model", xgb)]), hp
+
+
 def train_model(
     train_df: pd.DataFrame,
     config: ChurnConfig,
@@ -240,11 +303,17 @@ def train_model(
     smote: bool = False,
     calibrate: bool = False,
     tune: bool = False,
+    early_stopping: bool = False,
     seed: int = 42,
 ) -> tuple[object, ModelCard]:
     """Fit ``model`` on ``train_df`` and return (fitted estimator, ModelCard)."""
     if model not in MODELS:
         raise ModelError(f"unknown model {model!r} (use {' | '.join(MODELS)})")
+    if early_stopping:
+        if model != "xgboost":
+            raise ModelError("--early-stopping is only supported for the xgboost model")
+        if tune or smote or calibrate:
+            raise ModelError("--early-stopping cannot be combined with --tune/--smote/--calibrate")
     numeric, categorical = feature_columns(train_df, config)
     cols = config.columns
     X = train_df[numeric + categorical]
@@ -259,6 +328,8 @@ def train_model(
         if smote or calibrate:
             raise ModelError("smote/calibrate are not supported with --tune xgboost")
         estimator, hyperparams = _tune_xgb(pre, X, y, seed)
+    elif model == "xgboost" and early_stopping:
+        estimator, hyperparams = _fit_xgb_es(pre, train_df, config, numeric, categorical, seed)
     else:
         est = _estimator(model, seed, tune)
         hyperparams = {k: v for k, v in est.get_params().items() if k in _HP_KEYS.get(model, [])}
@@ -289,6 +360,7 @@ def train_model(
         tuned=tune,
         smote=smote,
         calibrated=calibrate,
+        early_stopping=early_stopping,
         n_features=len(numeric) + len(categorical),
         features=numeric + categorical,
         hyperparams=hyperparams,
