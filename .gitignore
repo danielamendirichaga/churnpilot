@@ -29,6 +29,10 @@ reports/
 # Local working notes / scratch — kept out of the repo.
 local-notes/
 
+# Generated / local configs (scaffolded by `churnpilot init`)
+churn.yaml
+ab.yaml
+
 # Local notes / office docs — never commit
 *.docx
 *.doc

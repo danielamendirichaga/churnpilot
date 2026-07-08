@@ -50,7 +50,7 @@ Requires [uv](https://docs.astral.sh/uv/) and Python 3.11+.
 ```bash
 uv venv --python 3.11 .venv
 uv pip install --python .venv -e ".[dev]"
-.venv/bin/pytest -q                        # 118 tests, green
+.venv/bin/pytest -q                        # 147 tests, green
 
 # the full pipeline (synthetic data by default — no real data needed)
 churnpilot init                            # write churn.yaml
