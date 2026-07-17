@@ -8,11 +8,11 @@ Point it at a customer table (via one `churn.yaml`) and an AI agent drives a rep
 pipeline to predict who will churn, decide who to save under a budget, and watch for drift —
 proposing and explaining every step while the data scientist stays in charge.
 
-> **Status: v1 + v2 complete.** The full pipeline — *generate → validate → profile → metrics →
-> split → train → compare → evaluate → simulate-policy → report → monitor* — plus a v2
-> **uplift/causal** layer (*A/B simulation → uplift models → Qini → risk-vs-uplift policy*), all
-> built and tested (147 passing tests). Deferred: an interactive Streamlit dashboard (v1.1).
-> See [STATUS.md](STATUS.md) and [CHANGELOG.md](CHANGELOG.md).
+> **Status: complete.** The full pipeline — *generate → validate → profile → metrics → split →
+> train → compare → evaluate → simulate-policy → report → monitor* — plus a v2 **uplift/causal**
+> layer (*A/B simulation → uplift models → Qini → risk-vs-uplift policy*) and a **human-in-the-loop
+> copilot** (`advise` / `run`), all built and tested (168 passing tests). Deferred: an interactive
+> Streamlit dashboard. See [STATUS.md](STATUS.md) and [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
@@ -50,7 +50,7 @@ Requires [uv](https://docs.astral.sh/uv/) and Python 3.11+.
 ```bash
 uv venv --python 3.11 .venv
 uv pip install --python .venv -e ".[dev]"
-.venv/bin/pytest -q                        # 147 tests, green
+.venv/bin/pytest -q                        # 168 tests, green
 
 # the full pipeline (synthetic data by default — no real data needed)
 churnpilot init                            # write churn.yaml
