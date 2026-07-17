@@ -164,3 +164,10 @@
 - `churnpilot/validate.py`: reports the coercion transparently (`✔ auto-coerced text→numeric: …`).
 - `tests/test_source.py` (+2): coercion via a real CSV load (StringDtype-safe), and the helper's threshold / blanks→NaN / id-and-categorical exclusions. Suite **165 green**; ruff + mypy clean.
 - Real data now works **without a manual pandas prep step**: pointed at the raw Telco CSV → USABLE, `TotalCharges` auto-coerced. Closes the "does the tool handle the prep?" gap. (Closes #21)
+
+## 2026-07-17 — S22: experiment detection → v1-vs-v2 guidance (#22)
+- `churnpilot/recommend.py`: `recommend_experiment(df)` — reports whether a randomized `treated` column is present (both arms) → "uplift (v2) available" vs "v1 (risk) pipeline — uplift needs a randomized A/B test".
+- `churnpilot/validate.py`: an always-on `experiment` check surfaces the same guidance up front.
+- `churnpilot/cli.py`: `advise` now leads with the uplift-availability recommendation.
+- `tests/test_recommend.py` (+2) and `tests/test_validate.py` (+1). Suite **168 green**; ruff + mypy clean.
+- Verified: `advise` on real Telco → "v1 (risk) — observational data, no experiment"; on the synthetic A/B panel → "Uplift (v2) available (50% treated)". The DS now knows which pipeline applies without hitting a command error. Closes the "how do I know v1 vs v2?" gap. (Closes #22)

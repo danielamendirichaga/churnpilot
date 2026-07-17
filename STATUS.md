@@ -38,9 +38,11 @@
 - **refactor: policy `_target_set`** shared across `simulate_policy` + `contrast_policies` (DRY).
 - **S19 (#19) — `advise` — DONE.** `recommend.py`: deterministic, unit-tested rules (`Recommendation` = what / why / action) for every gate — features / split / model (stability > peak AUC) / policy / retrain / ship; `advise` CLI prints pre-flight recommendations. Verified: ruff + mypy clean, **160 tests green**; smoke on real Telco → clean recommendations.
 - **S20 (#20) — interactive `run` — DONE. 🎉 copilot layer complete.** `churnpilot run` walks the pipeline, pausing at each gate (features → split → model → ship → policy) to show evidence + the `recommend.py` recommendation and prompt confirm/override; `--yes` non-interactive mode (tested E2E via CliRunner). README copilot section + AGENTS command map. Verified: ruff + mypy clean, **163 tests green**; live `run --yes` on real Telco narrated every gate → shipped logistic on stability, ship-verdict go, targeted policy, wrote the report.
+- **S21 (#21) — auto-coerce numeric-looking text — DONE.** `load_data` coerces object/string columns ≥95% numeric-parseable (e.g. Telco's text `TotalCharges`) to numeric (excludes id/date/target, leaves categorical text alone); `validate` reports it. Real CSVs work with **no manual prep**. ruff + mypy clean, **165 tests green**.
+- **S22 (#22) — experiment detection (v1 vs v2 guidance) — DONE.** `recommend_experiment` + `advise` + `validate` report whether a randomized `treated` column is present → "uplift (v2) available" vs "v1 (risk) pipeline — uplift needs a randomized A/B test". The DS now knows which pipeline applies without hitting an error. ruff + mypy clean, **168 tests green**; verified on Telco (v1) vs synthetic A/B (v2).
 
 ## Active track
-- None — **copilot layer complete** (#19–#20 closed). The project is now **v1 + v2 + copilot**: 163 tests green, ruff + mypy clean, public-ready.
+- None. The project is **v1 + v2 + copilot + real-data ergonomics**: all 22 issues closed, **168 tests green**, ruff + mypy clean, public-ready.
 
 ## Next up
 1. *(Anytime)* flip the repo **public** (history is clean).

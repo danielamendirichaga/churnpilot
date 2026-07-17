@@ -19,6 +19,7 @@ from typing import Literal
 import pandas as pd
 
 from .config import ChurnConfig
+from .generate import TREATMENT_COL
 
 Status = Literal["pass", "warn", "fail"]
 _SYMBOL: dict[Status, str] = {"pass": "✔", "warn": "⚠", "fail": "✗"}
@@ -138,6 +139,25 @@ def validate(df: pd.DataFrame, config: ChurnConfig) -> ValidationReport:
     coerced = df.attrs.get("coerced_numeric") or []
     if coerced:
         checks.append(Check("dtypes", "pass", f"auto-coerced text→numeric: {', '.join(coerced)}"))
+
+    # experiment → is uplift (v2) available, or v1 (risk) only?
+    if TREATMENT_COL in present and int(df[TREATMENT_COL].nunique(dropna=True)) >= 2:
+        rate = float((df[TREATMENT_COL] == 1).mean())
+        checks.append(
+            Check(
+                "experiment",
+                "pass",
+                f"'{TREATMENT_COL}' present ({rate:.0%} treated) → uplift (v2) available",
+            )
+        )
+    else:
+        checks.append(
+            Check(
+                "experiment",
+                "pass",
+                f"no '{TREATMENT_COL}' column → v1 (risk) pipeline; uplift (v2) needs a randomized A/B test",
+            )
+        )
 
     # features
     if cols.features != "auto":

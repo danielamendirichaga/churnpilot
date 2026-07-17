@@ -784,11 +784,21 @@ def advise(
 ) -> None:
     """Print the copilot's pre-flight recommendations (features, split, policy) for your data."""
     from .profile import profile_frame
-    from .recommend import recommend_features, recommend_policy, recommend_split
+    from .recommend import (
+        recommend_experiment,
+        recommend_features,
+        recommend_policy,
+        recommend_split,
+    )
 
     cfg, df = _load(config)
     records = profile_frame(df, cfg)
-    recs = [recommend_features(records), recommend_split(cfg), recommend_policy(cfg)]
+    recs = [
+        recommend_experiment(df),
+        recommend_features(records),
+        recommend_split(cfg),
+        recommend_policy(cfg),
+    ]
 
     typer.echo(f"churnpilot advises  ({len(df):,} rows)\n")
     for r in recs:

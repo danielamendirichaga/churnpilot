@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import pandas as pd
+
 from churnpilot.config import ChurnConfig
 from churnpilot.recommend import (
+    recommend_experiment,
     recommend_features,
     recommend_model,
     recommend_policy,
@@ -97,3 +100,16 @@ def test_ship_go_when_metrics_clear_the_bar():
 def test_ship_nogo_on_low_auc_or_bad_calibration():
     assert recommend_ship({"metrics": {"auc": 0.55, "ece": 0.03}}).action["ship"] is False
     assert recommend_ship({"metrics": {"auc": 0.83, "ece": 0.20}}).action["ship"] is False
+
+
+# --- experiment / v1-vs-v2 ------------------------------------------------ #
+def test_experiment_available_with_a_randomized_treatment():
+    df = pd.DataFrame({"treated": [0, 1, 0, 1], "x": [1, 2, 3, 4]})
+    rec = recommend_experiment(df)
+    assert rec.action["uplift"] is True and "available" in rec.recommendation.lower()
+
+
+def test_experiment_absent_means_v1_only():
+    df = pd.DataFrame({"x": [1, 2, 3]})  # no treated column → observational
+    rec = recommend_experiment(df)
+    assert rec.action["uplift"] is False and "v1" in rec.recommendation.lower()

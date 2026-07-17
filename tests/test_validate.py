@@ -35,6 +35,16 @@ def test_clean_panel_is_usable():
     assert target.status == "pass"
 
 
+def test_experiment_check_guides_v1_vs_v2():
+    # observational data (no treated column) → v1 (risk) pipeline
+    v1 = next(c for c in validate(PANEL, _cfg(PANEL_SCHEMA)).checks if c.name == "experiment")
+    assert "v1 (risk)" in v1.message
+    # a randomized `treated` column → uplift (v2) available
+    ab = PANEL.assign(treated=[0, 1, 0])
+    v2 = next(c for c in validate(ab, _cfg(PANEL_SCHEMA)).checks if c.name == "experiment")
+    assert "uplift (v2) available" in v2.message
+
+
 def test_missing_target_fails():
     report = validate(PANEL, _cfg({"id_col": "subscriber_id", "target_col": "cancelled"}))
     assert not report.ok

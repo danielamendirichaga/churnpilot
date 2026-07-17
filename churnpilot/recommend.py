@@ -10,9 +10,11 @@ human's, never the tool's.
 
 from __future__ import annotations
 
+import pandas as pd
 from pydantic import BaseModel
 
 from .config import ChurnConfig
+from .generate import TREATMENT_COL
 from .profile import high_corr_features
 
 
@@ -147,4 +149,28 @@ def recommend_ship(
         recommendation="Ship it" if ok else "Not ready — investigate before shipping",
         rationale=why,
         action={"ship": ok},
+    )
+
+
+def recommend_experiment(df: pd.DataFrame) -> Recommendation:
+    """Is there a randomized experiment in the data → is uplift (v2) even available?"""
+    if TREATMENT_COL in df.columns and int(df[TREATMENT_COL].nunique(dropna=True)) >= 2:
+        rate = float((df[TREATMENT_COL] == 1).mean())
+        return Recommendation(
+            gate="uplift",
+            recommendation="Uplift (v2) is available",
+            rationale=(
+                f"a randomized '{TREATMENT_COL}' column is present ({rate:.0%} treated) — "
+                "you can target by causal effect (`train-uplift`), not just risk"
+            ),
+            action={"uplift": True},
+        )
+    return Recommendation(
+        gate="uplift",
+        recommendation="v1 (risk) pipeline — uplift (v2) not available",
+        rationale=(
+            f"no '{TREATMENT_COL}' column → no experiment; uplift needs a randomized A/B test "
+            "(treatment vs. control), which observational churn data doesn't have"
+        ),
+        action={"uplift": False},
     )
