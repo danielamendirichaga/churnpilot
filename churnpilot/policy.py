@@ -49,6 +49,23 @@ class PolicyReport(ArtifactBase):
     segments: dict
 
 
+def _target_set(
+    benefit: np.ndarray, offer_cost: float, budget: Optional[float], n_offers: Optional[int]
+) -> tuple[np.ndarray, int, int, np.ndarray]:
+    """Rank by benefit desc; return ``(order, n_eligible, cap, mask)`` for the positive-benefit
+    set kept within the budget — a count of offers or a dollar cap. Shared by both policies."""
+    order = np.argsort(-benefit, kind="mergesort")  # best-first, stable
+    n_eligible = int((benefit > 0).sum())
+    cap = n_eligible
+    if n_offers is not None:
+        cap = min(cap, n_offers)
+    if budget is not None:
+        cap = min(cap, int(budget // offer_cost) if offer_cost > 0 else cap)
+    mask = np.zeros(len(benefit), dtype=bool)
+    mask[order[:cap]] = True
+    return order, n_eligible, cap, mask
+
+
 def simulate_policy(
     estimator,
     data: pd.DataFrame,
@@ -73,18 +90,9 @@ def simulate_policy(
 
     gross = save_rate * p_churn * cltv  # expected value saved if we target them
     benefit = gross - offer_cost
-    order = np.argsort(-benefit, kind="mergesort")  # best-first, stable
-    n_eligible = int((benefit > 0).sum())
+    order, n_eligible, cap, mask = _target_set(benefit, offer_cost, budget, n_offers)
 
-    # Budget → how many of the eligible we can afford.
-    cap = n_eligible
-    if n_offers is not None:
-        cap = min(cap, n_offers)
-    if budget is not None:
-        cap = min(cap, int(budget // offer_cost) if offer_cost > 0 else n_eligible)
-
-    targeted = order[:cap]
-    retained = float(gross[targeted].sum())
+    retained = float(gross[mask].sum())
     spend = float(cap * offer_cost)
     net = round(retained - spend, 2)
     roi = round(retained / spend, 3) if spend > 0 else None
@@ -106,8 +114,6 @@ def simulate_policy(
     # By-segment breakdown of the targeted set.
     segments: dict = {}
     if segment_col in data.columns:
-        mask = np.zeros(len(data), dtype=bool)
-        mask[targeted] = True
         for level in data[segment_col].dropna().unique():
             m = mask & (data[segment_col] == level).to_numpy()
             segments[str(level)] = {
@@ -143,21 +149,6 @@ class PolicyContrast(ArtifactBase):
     strategies: dict  # {"risk": {...}, "uplift": {...}}
     uplift_net_advantage: float  # true net(uplift) − true net(risk)
     sleeping_dogs_avoided: int
-
-
-def _target_set(
-    benefit: np.ndarray, offer_cost: float, budget: Optional[float], n_offers: Optional[int]
-) -> tuple[np.ndarray, int]:
-    """Rank by benefit desc, keep the positive-benefit set within the budget (count or $)."""
-    order = np.argsort(-benefit, kind="mergesort")
-    cap = int((benefit > 0).sum())
-    if n_offers is not None:
-        cap = min(cap, n_offers)
-    if budget is not None:
-        cap = min(cap, int(budget // offer_cost) if offer_cost > 0 else cap)
-    mask = np.zeros(len(benefit), dtype=bool)
-    mask[order[:cap]] = True
-    return mask, cap
 
 
 def contrast_policies(
@@ -199,7 +190,7 @@ def contrast_policies(
 
     strategies: dict = {}
     for name, benefit in benefits.items():
-        mask, cap = _target_set(benefit, offer_cost, budget, n_offers)
+        _, _, cap, mask = _target_set(benefit, offer_cost, budget, n_offers)
         true_retained = float((true_tau[mask] * cltv[mask]).sum())  # honest: the causal value
         spend = float(cap * offer_cost)
         strategies[name] = {
