@@ -1,9 +1,10 @@
 """Per-column data profiling — the EDA numbers the agent reasons over.
 
 :func:`profile_frame` returns one record per column: its role, null rate, cardinality,
-numeric summary stats, and — for numeric features — a correlation to the (numeric-coerced)
-target. That target correlation is what surfaces the planted leakage trap
-(``cancel_flow_visits_30d`` shows an extreme correlation); :func:`high_corr_features`
+numeric summary stats, and — for numeric features — a correlation to the **binarized** target
+(``target == positive_value``, the same rule ``train``/``evaluate`` use, so it works for string
+labels like ``"Yes"/"No"`` too). That target correlation is what surfaces the planted leakage
+trap (``cancel_flow_visits_30d`` shows an extreme correlation); :func:`high_corr_features`
 turns that into a soft "possible leakage" hint the agent can act on.
 
 Roles for the id / date / target columns come from the config (not guessed), which matters
@@ -60,7 +61,13 @@ def profile_frame(df: pd.DataFrame, config: ChurnConfig) -> list[dict]:
     ``min/max/mean/std/q25/q50/q75``; numeric *features* also add ``target_corr``.
     """
     target = config.columns.target_col
-    target_numeric = pd.to_numeric(df[target], errors="coerce") if target in df.columns else None
+    # Binarize via positive_value (as train/evaluate do) so the leakage correlation works for
+    # string labels ("Yes"/"No"), not just 0/1 targets.
+    target_binary = (
+        (df[target] == config.columns.positive_value).astype(float)
+        if target in df.columns
+        else None
+    )
     n_rows = len(df)
     records: list[dict] = []
 
@@ -86,8 +93,8 @@ def profile_frame(df: pd.DataFrame, config: ChurnConfig) -> list[dict]:
                     q50=round(float(valid.quantile(0.50)), 2),
                     q75=round(float(valid.quantile(0.75)), 2),
                 )
-            if target_numeric is not None and col != target:
-                rec["target_corr"] = _safe_corr(num, target_numeric)
+            if target_binary is not None and col != target:
+                rec["target_corr"] = _safe_corr(num, target_binary)
         records.append(rec)
 
     return records

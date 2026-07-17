@@ -73,3 +73,24 @@ def test_high_corr_flags_the_leak(records):
     assert "cancel_flow_visits_30d" in leaky
     # Genuine drivers stay below the leakage threshold.
     assert "watch_hours_30d" not in leaky
+
+
+def test_target_corr_works_with_string_labels():
+    # Real churn data often uses "Yes"/"No" labels (e.g. IBM Telco), not 0/1. The correlation
+    # must binarize via positive_value instead of coercing the string to a number (all-NaN).
+    df = pd.DataFrame(
+        {
+            "cust": range(10),
+            "tenure": list(range(1, 11)),
+            "Churn": ["Yes", "Yes", "Yes", "Yes", "No", "No", "No", "No", "No", "No"],
+        }
+    )
+    cfg = ChurnConfig.model_validate(
+        {
+            "source": {"kind": "synthetic"},
+            "schema": {"id_col": "cust", "target_col": "Churn", "positive_value": "Yes"},
+        }
+    )
+    tenure = next(r for r in profile_frame(df, cfg) if r["column"] == "tenure")
+    assert tenure["target_corr"] is not None  # a string target no longer blanks it out
+    assert tenure["target_corr"] < 0  # low tenure → churned (Yes) → negative correlation

@@ -141,3 +141,8 @@
 - `README.md`: a v2 "Uplift / causal" section + quickstart; refreshed artifact list + status → v1 + v2 complete. `AGENTS.md` build order updated.
 - `tests/test_report.py` (+3): v2 charts return PNG; report appends the uplift section (5 figures) with qini+contrast, omits it by default. `tests/test_pipeline_v2.py` (1): capstone — generate `--treatment` → risk + uplift models → Qini → contrast → report, asserting uplift beats risk and every v2 artifact carries lineage. Full suite **147 green**; ruff + mypy clean.
 - Rendered a 308 KB self-contained v1+v2 report. **v2 done — issues #14–#18 all closed.** (Closes #18)
+
+## 2026-07-17 — fix: profile leakage hint now works on string targets
+- `churnpilot/profile.py`: `profile_frame` binarizes the target via `positive_value` (the same rule `train`/`evaluate` use) before computing feature–target correlations, instead of `pd.to_numeric(...)` — which turned string labels like `"Yes"/"No"` into all-NaN and left `target_corr` (and thus the leakage hint) blank on real data. Backward-compatible for 0/1 targets.
+- `tests/test_profile.py`: added a "Yes"/"No" string-label correlation test. Suite **148 green**; ruff + mypy clean.
+- Surfaced by running the full pipeline on the real IBM Telco Customer Churn dataset (7,043 rows) — the synthetic data's 0/1 target had never exposed it.
