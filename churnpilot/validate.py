@@ -134,6 +134,11 @@ def validate(df: pd.DataFrame, config: ChurnConfig) -> ValidationReport:
             Check("value", "warn", f"value_col '{cols.value_col}' not found — policy sim limited")
         )
 
+    # numeric-looking text columns auto-coerced on load (set by load_data)
+    coerced = df.attrs.get("coerced_numeric") or []
+    if coerced:
+        checks.append(Check("dtypes", "pass", f"auto-coerced text→numeric: {', '.join(coerced)}"))
+
     # features
     if cols.features != "auto":
         missing = [f for f in cols.features if f not in present]

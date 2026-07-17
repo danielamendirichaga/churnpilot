@@ -158,3 +158,9 @@
 - `tests/test_run.py` (3): the `--yes` path runs end-to-end (all artifacts + report land), walks every gate and drops the planted leak, and the report is self-contained. Suite **163 green**; ruff + mypy clean.
 - Docs: README "drive it as a copilot" section; AGENTS command map; cli header.
 - Live `run --yes` on the real IBM Telco data narrated every gate → shipped **logistic on stability** (0.847), ship-verdict **go** (AUC 0.83 / ECE 0.03), targeted a policy — the human-in-the-loop copilot, now a tested feature. **Copilot layer complete (#19–#20).** (Closes #20)
+
+## 2026-07-17 — S21: auto-coerce numeric-looking text on load (#21)
+- `churnpilot/source.py`: `load_data` now runs `_coerce_numeric_like` — object/string columns whose non-null values are ≥95% numeric-parseable (e.g. Telco's text `TotalCharges`) are coerced to numbers; the id/date/target columns and genuinely-categorical text (`"Yes"/"No"`) are left alone. Coerced names are recorded in `df.attrs['coerced_numeric']`.
+- `churnpilot/validate.py`: reports the coercion transparently (`✔ auto-coerced text→numeric: …`).
+- `tests/test_source.py` (+2): coercion via a real CSV load (StringDtype-safe), and the helper's threshold / blanks→NaN / id-and-categorical exclusions. Suite **165 green**; ruff + mypy clean.
+- Real data now works **without a manual pandas prep step**: pointed at the raw Telco CSV → USABLE, `TotalCharges` auto-coerced. Closes the "does the tool handle the prep?" gap. (Closes #21)

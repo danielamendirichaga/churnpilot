@@ -23,19 +23,53 @@ class SourceError(RuntimeError):
 
 
 def load_data(config: ChurnConfig) -> pd.DataFrame:
-    """Load the dataset described by ``config.source`` into a DataFrame."""
+    """Load the dataset described by ``config.source``, coercing numeric-looking text columns."""
     src = config.source
     if src.kind == "synthetic":
         from .generate import make_panel
 
-        return make_panel()
-    if src.kind == "file":
-        return _load_file(src)
-    if src.kind == "sqlite":
-        return _load_sqlite(src)
-    if src.kind == "postgres":
-        return _load_postgres(src)
-    raise SourceError(f"Unknown source kind: {src.kind!r}")  # pragma: no cover
+        df = make_panel()
+    elif src.kind == "file":
+        df = _load_file(src)
+    elif src.kind == "sqlite":
+        df = _load_sqlite(src)
+    elif src.kind == "postgres":
+        df = _load_postgres(src)
+    else:
+        raise SourceError(f"Unknown source kind: {src.kind!r}")  # pragma: no cover
+    return _coerce_numeric_like(df, config)
+
+
+def _coerce_numeric_like(
+    df: pd.DataFrame, config: ChurnConfig, threshold: float = 0.95
+) -> pd.DataFrame:
+    """Coerce object columns that are *mostly numeric text* (e.g. Telco's ``TotalCharges``) to numbers.
+
+    Real CSVs routinely load a numeric column as text (a stray space, a thousands separator). We
+    coerce a column only when ≥ ``threshold`` of its non-null values parse as numbers — a genuinely
+    categorical column (``"Yes"``/``"No"``) is left alone — and skip the id/date/target columns. The
+    coerced column names are recorded in ``df.attrs['coerced_numeric']`` so ``validate`` reports it.
+    """
+    cols = config.columns
+    reserved = {cols.id_col, cols.date_col, cols.target_col}
+    coerced: list[str] = []
+    for c in df.columns:
+        col = df[c]
+        # skip the id/date/target and anything already numeric/bool/datetime — only text is a candidate
+        if (
+            c in reserved
+            or pd.api.types.is_numeric_dtype(col)
+            or pd.api.types.is_bool_dtype(col)
+            or pd.api.types.is_datetime64_any_dtype(col)
+        ):
+            continue
+        parsed = pd.to_numeric(col, errors="coerce")
+        nonnull = int(col.notna().sum())
+        if nonnull and int(parsed.notna().sum()) / nonnull >= threshold:
+            df[c] = parsed
+            coerced.append(c)
+    df.attrs["coerced_numeric"] = coerced
+    return df
 
 
 def _load_file(src: SourceConfig) -> pd.DataFrame:
