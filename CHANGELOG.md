@@ -152,3 +152,9 @@
 - `churnpilot/cli.py`: `advise` command prints the pre-flight recommendations (features / split / policy).
 - `tests/test_recommend.py` (12): every rule, incl. stable-over-overfit model pick and go/no-go thresholds. Suite **160 green**; ruff + mypy clean.
 - Smoke on the real IBM Telco data: keep all features (no leak), random split (snapshot), cost-based policy (value_col present). Sets up S20's interactive `run`. (Closes #19)
+
+## 2026-07-17 — S20: interactive run — the copilot, made real (#20)
+- `churnpilot/cli.py`: `run` command orchestrates the pipeline and **pauses at each decision gate** — features/leakage → split → model → ship → policy — showing the evidence + the `recommend.py` recommendation and prompting the DS to confirm or override. `--yes` takes every recommendation (non-interactive / scriptable). Writes model + all artifacts + a self-contained report to `--out-dir`.
+- `tests/test_run.py` (3): the `--yes` path runs end-to-end (all artifacts + report land), walks every gate and drops the planted leak, and the report is self-contained. Suite **163 green**; ruff + mypy clean.
+- Docs: README "drive it as a copilot" section; AGENTS command map; cli header.
+- Live `run --yes` on the real IBM Telco data narrated every gate → shipped **logistic on stability** (0.847), ship-verdict **go** (AUC 0.83 / ECE 0.03), targeted a policy — the human-in-the-loop copilot, now a tested feature. **Copilot layer complete (#19–#20).** (Closes #20)

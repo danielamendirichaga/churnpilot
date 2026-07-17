@@ -3,6 +3,7 @@
 v1 pipeline: init -> generate -> validate -> profile -> metrics -> split -> train ->
 compare -> evaluate -> simulate-policy -> report -> monitor.
 v2 (uplift/causal): generate --treatment -> train-uplift -> (uplift-eval, uplift policy).
+Copilot: advise (pre-flight recommendations) and run (interactive, checkpointed pipeline).
 """
 
 from __future__ import annotations
@@ -794,6 +795,121 @@ def advise(
         typer.echo(f"  [{r.gate}] {r.recommendation}")
         typer.echo(f"      why: {r.rationale}")
     typer.echo("\n  → `churnpilot run` acts on these with your approval at each step.")
+
+
+@app.command()
+def run(
+    config: Path = typer.Option(
+        Path("churn.yaml"), "--config", help="Path to the churn.yaml config."
+    ),
+    out_dir: Path = typer.Option(
+        Path("data/run"), "--out-dir", help="Where to write splits, model, artifacts, report."
+    ),
+    models: str = typer.Option(
+        "logistic,rf,xgboost", "--models", help="Model shortlist to compare."
+    ),
+    yes: bool = typer.Option(
+        False, "--yes", help="Take every recommendation without prompting (non-interactive)."
+    ),
+    seed: int = typer.Option(42, "--seed", help="RNG seed."),
+) -> None:
+    """Interactive copilot — walk the pipeline, pausing at each gate to confirm or override."""
+    from .compare import compare_models
+    from .evaluate import evaluate_model
+    from .model import MODELS, feature_columns, save_model, train_model
+    from .policy import simulate_policy
+    from .profile import profile_frame
+    from .recommend import (
+        recommend_features,
+        recommend_model,
+        recommend_policy,
+        recommend_ship,
+        recommend_split,
+    )
+    from .report import build_html
+    from .split import split_dataset
+
+    def show(rec) -> None:
+        typer.echo(f"\n▸ [{rec.gate}] {rec.recommendation}")
+        typer.echo(f"    {rec.rationale}")
+
+    cfg, df = _load(config)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    mode = "  (--yes: taking every recommendation)" if yes else ""
+    typer.echo(f"churnpilot run — {len(df):,} rows{mode}")
+
+    # ── Gate 1: features / leakage ──────────────────────────────────────
+    frec = recommend_features(profile_frame(df, cfg))
+    show(frec)
+    excludes = frec.action["exclude"]
+    if excludes and not (yes or typer.confirm(f"    exclude {', '.join(excludes)}?", default=True)):
+        excludes = []
+    numeric, categorical = feature_columns(df, cfg)
+    cfg = cfg.model_copy(deep=True)
+    cfg.columns.features = [c for c in numeric + categorical if c not in excludes]
+
+    # ── Gate 2: split ───────────────────────────────────────────────────
+    srec = recommend_split(cfg)
+    show(srec)
+    strategy = srec.action["strategy"]
+    if not yes:
+        strategy = typer.prompt("    split strategy", default=strategy)
+    train_df, val_df, test_df, _ = split_dataset(df, cfg, strategy=strategy, seed=seed)
+    typer.echo(f"    → train {len(train_df):,} / val {len(val_df):,} / test {len(test_df):,}")
+
+    # ── Gate 3: model (stability over peak AUC) ─────────────────────────
+    shortlist = [m.strip() for m in models.split(",") if m.strip()]
+    rows = compare_models(train_df, val_df, cfg, models=shortlist, seed=seed)
+    for r in rows:
+        flag = " ✔stable" if r["stable"] else ""
+        typer.echo(
+            f"    {r['model']:<9} holdout AUC {r['holdout_auc']:.3f}  drop {r['auc_drop']:+.3f}{flag}"
+        )
+    mrec = recommend_model(rows)
+    show(mrec)
+    model = mrec.action["model"]
+    if not yes:
+        model = typer.prompt("    model to train", default=model)
+    if model not in MODELS:
+        typer.echo(f"unknown model {model!r} (use {' | '.join(MODELS)})")
+        raise typer.Exit(code=1)
+    est, card = train_model(train_df, cfg, model=model, seed=seed)
+    save_model(est, out_dir / "model.pkl")
+    card.write_json(out_dir / "model.card.json")
+
+    # ── Gate 4: evaluate + ship read ────────────────────────────────────
+    ev = evaluate_model(est, test_df, cfg, reference_df=train_df)
+    ev.write_json(out_dir / "eval-report.json")
+    typer.echo(f"    → held-out AUC {ev.metrics['auc']:.3f} | ECE {ev.metrics['ece']:.3f}")
+    show(recommend_ship(ev.model_dump()))
+
+    # ── Gate 5: policy ──────────────────────────────────────────────────
+    show(recommend_policy(cfg))
+    policy_report = None
+    if cfg.columns.value_col is not None:
+        save_rate, offer_cost, budget = 0.3, 5.0, None
+        if not yes:
+            save_rate = float(typer.prompt("    save_rate", default=0.3))
+            offer_cost = float(typer.prompt("    offer_cost ($)", default=5.0))
+            raw = typer.prompt("    budget ($, blank = unlimited)", default="")
+            budget = float(raw) if str(raw).strip() else None
+        policy_report = simulate_policy(
+            est, test_df, cfg, save_rate=save_rate, offer_cost=offer_cost, budget=budget
+        )
+        policy_report.write_json(out_dir / "policy-report.json")
+        roi = f", ROI {policy_report.roi:.2f}x" if policy_report.roi is not None else ""
+        typer.echo(
+            f"    → target {policy_report.n_targeted:,}, net ${policy_report.net_value:,.0f}{roi}"
+        )
+
+    # ── Report ──────────────────────────────────────────────────────────
+    html = build_html(
+        ev.model_dump(),
+        policy_report.model_dump() if policy_report is not None else None,
+        card.model_dump(),
+    )
+    (out_dir / "report.html").write_text(html)
+    typer.echo(f"\n✔ done — model + artifacts + report in {out_dir}/  (open {out_dir}/report.html)")
 
 
 if __name__ == "__main__":  # pragma: no cover

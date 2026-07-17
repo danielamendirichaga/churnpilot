@@ -69,6 +69,21 @@ Materialize the synthetic dataset to a file with `churnpilot generate --out data
 then point `churn.yaml` at your own data (`source: {kind: file, path: ...}` — or postgres/sqlite).
 *(macOS: XGBoost needs `brew install libomp`.)*
 
+### …or drive it as a copilot
+
+The tool is deterministic and tested; the **judgment** lives in a copilot layer that *proposes,
+you decide*:
+
+```bash
+churnpilot advise               # pre-flight recommendations (features / split / policy)
+churnpilot run                  # walks the pipeline, pausing at each gate for your call
+churnpilot run --yes            # take every recommendation (non-interactive / scriptable)
+```
+
+`run` surfaces the evidence, states its recommendation (drop this leak? / ship logistic on
+stability? / your budget?), and **never auto-decides** — the recommendations are deterministic,
+unit-tested rules (`recommend.py`), not an LLM. The data scientist stays in the loop.
+
 ---
 
 ## What's inside (highlights)

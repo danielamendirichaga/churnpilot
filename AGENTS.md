@@ -18,6 +18,8 @@
 ## Commands
 - setup:     uv venv --python 3.11 .venv && uv pip install --python .venv -e ".[dev]"
 - run:       churnpilot <cmd>   (init | generate | validate | profile | metrics | split | train | compare | evaluate | simulate-policy | report | monitor | version)
+- v2 uplift: generate --treatment | train-uplift | uplift-eval | policy-contrast
+- copilot:   advise (pre-flight recommendations) | run (interactive checkpointed pipeline; `--yes` non-interactive). Recommendation rules live in `recommend.py` (tested, not an LLM).
 - dashboard: streamlit run churnpilot/app.py   [v1.1, once app.py exists]
 - test:      .venv/bin/pytest -q
 - lint/fmt:  ruff check .   /   ruff format .

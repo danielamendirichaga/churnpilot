@@ -37,16 +37,14 @@
 - **fix: profile leakage hint on string targets.** `profile_frame` binarizes via `positive_value` (as train/evaluate do) — caught by running on the real IBM Telco dataset (0/1 synthetic target never exposed it).
 - **refactor: policy `_target_set`** shared across `simulate_policy` + `contrast_policies` (DRY).
 - **S19 (#19) — `advise` — DONE.** `recommend.py`: deterministic, unit-tested rules (`Recommendation` = what / why / action) for every gate — features / split / model (stability > peak AUC) / policy / retrain / ship; `advise` CLI prints pre-flight recommendations. Verified: ruff + mypy clean, **160 tests green**; smoke on real Telco → clean recommendations.
+- **S20 (#20) — interactive `run` — DONE. 🎉 copilot layer complete.** `churnpilot run` walks the pipeline, pausing at each gate (features → split → model → ship → policy) to show evidence + the `recommend.py` recommendation and prompt confirm/override; `--yes` non-interactive mode (tested E2E via CliRunner). README copilot section + AGENTS command map. Verified: ruff + mypy clean, **163 tests green**; live `run --yes` on real Telco narrated every gate → shipped logistic on stability, ship-verdict go, targeted policy, wrote the report.
 
-## Active track — copilot layer (`copilot` label)
-- Making the human-in-the-loop decision flow a real, tested feature. **S19 done; S20 next.**
-
-## Active issue
-- **#20 — S20: interactive `run`** (checkpointed copilot orchestrator).
+## Active track
+- None — **copilot layer complete** (#19–#20 closed). The project is now **v1 + v2 + copilot**: 163 tests green, ruff + mypy clean, public-ready.
 
 ## Next up
-1. **S20 (#20)** — `churnpilot run`: orchestrate the pipeline, pause at each gate (evidence + `recommend.py` recommendation), prompt to confirm/override; `--yes` non-interactive mode (tested E2E). Docs + capstone.
-2. *(Then)* flip repo public. *(Deferred)* v1.1 Streamlit dashboard. *(Future)* v2.1: X-learner, seasonality, real A/B data.
+1. *(Anytime)* flip the repo **public** (history is clean).
+2. *(Deferred)* v1.1 Streamlit dashboard. *(Future)* v2.1: X-learner, seasonality, real A/B data.
 
 ## Deferred
 - **v1.1 — Streamlit `dashboard`** (`churnpilot/app.py`): interactive policy sliders over `charts.py`. Dropped for now in favor of v2; revisit after.
