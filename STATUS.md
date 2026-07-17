@@ -1,4 +1,4 @@
-# Status — churnpilot (updated 2026-07-07)
+# Status — churnpilot (updated 2026-07-17)
 
 ## Done
 - Setup complete: `churnpilot` package, `.venv` (Python 3.11.15), deps installed, verified green (`pytest` + `churnpilot version`).
@@ -32,19 +32,21 @@
 - **S17 (#17) — uplift policy + contrast — DONE. 👑** `policy.py` `contrast_policies` — targets by risk (`save_rate·P̂(churn)·CLTV`) vs uplift (`τ̂·CLTV`) at one budget, scores **both on the true counterfactual** (`true_uplift·CLTV`), counts sleeping dogs treated; `PolicyContrast` artifact; `policy-contrast` CLI. Verified: ruff + mypy clean, 143 tests green; smoke 66k rows, 3k offers → **uplift nets $59.5k vs risk $35.7k (+$23.8k, +66%), 66 vs 634 sleeping dogs**.
 - **S18 (#18) — v2 report + docs + capstone — DONE. 🎉 v2 COMPLETE.** `charts.py` +`qini_curve_chart`/`uplift_vs_risk_chart`; `report.py` `build_html` gains an **uplift section** (Qini + risk-vs-uplift + decile table) from the `qini-report`/`policy-contrast` artifacts; `report --qini/--contrast` CLI. README v2 section + quickstart; `tests/test_pipeline_v2.py` capstone (generate→uplift→qini→contrast→report). Verified: ruff + mypy clean, **147 tests green**; 308 KB v1+v2 report rendered.
 
-## In progress
-- Nothing — **v1 shipped.**
+## Done since v2 (post-v2)
+- **History cleanup DONE.** `git filter-repo` (surgical) purged `Project Records.docx` + every course/reference-project trace from history and the 3 offending commit messages; kept all 29 commits + `Claude Opus` trailers; force-pushed; verified **zero** traces. Local `Code_References/` → `local-notes/`. **Repo is public-ready** (still private — owner flips the toggle).
+- **fix: profile leakage hint on string targets.** `profile_frame` binarizes via `positive_value` (as train/evaluate do) — caught by running on the real IBM Telco dataset (0/1 synthetic target never exposed it).
+- **refactor: policy `_target_set`** shared across `simulate_policy` + `contrast_policies` (DRY).
+- **S19 (#19) — `advise` — DONE.** `recommend.py`: deterministic, unit-tested rules (`Recommendation` = what / why / action) for every gate — features / split / model (stability > peak AUC) / policy / retrain / ship; `advise` CLI prints pre-flight recommendations. Verified: ruff + mypy clean, **160 tests green**; smoke on real Telco → clean recommendations.
 
-## Active track
-- **v2 — uplift / causal (BUILDING).** Design **accepted** (`docs/v2-design-brief.md`); issues **#14–#18** created (`v2-slice`). v1.1 dashboard deferred.
+## Active track — copilot layer (`copilot` label)
+- Making the human-in-the-loop decision flow a real, tested feature. **S19 done; S20 next.**
 
 ## Active issue
-- None. 🎉 **v1 + v2 COMPLETE** — issues #1–#18 all closed; 147 tests green.
+- **#20 — S20: interactive `run`** (checkpointed copilot orchestrator).
 
-## Next up (post-v2)
-1. *(Optional)* pre-public **history cleanup** (see standing constraints in memory), then flip repo public.
-2. *(Deferred)* **v1.1 Streamlit dashboard** (`app.py`, interactive policy sliders over `charts.py`).
-3. *(Future)* v2.1: X-learner, seasonality, real A/B-test data.
+## Next up
+1. **S20 (#20)** — `churnpilot run`: orchestrate the pipeline, pause at each gate (evidence + `recommend.py` recommendation), prompt to confirm/override; `--yes` non-interactive mode (tested E2E). Docs + capstone.
+2. *(Then)* flip repo public. *(Deferred)* v1.1 Streamlit dashboard. *(Future)* v2.1: X-learner, seasonality, real A/B data.
 
 ## Deferred
 - **v1.1 — Streamlit `dashboard`** (`churnpilot/app.py`): interactive policy sliders over `charts.py`. Dropped for now in favor of v2; revisit after.

@@ -775,5 +775,26 @@ def policy_contrast_cmd(
     )
 
 
+@app.command()
+def advise(
+    config: Path = typer.Option(
+        Path("churn.yaml"), "--config", help="Path to the churn.yaml config."
+    ),
+) -> None:
+    """Print the copilot's pre-flight recommendations (features, split, policy) for your data."""
+    from .profile import profile_frame
+    from .recommend import recommend_features, recommend_policy, recommend_split
+
+    cfg, df = _load(config)
+    records = profile_frame(df, cfg)
+    recs = [recommend_features(records), recommend_split(cfg), recommend_policy(cfg)]
+
+    typer.echo(f"churnpilot advises  ({len(df):,} rows)\n")
+    for r in recs:
+        typer.echo(f"  [{r.gate}] {r.recommendation}")
+        typer.echo(f"      why: {r.rationale}")
+    typer.echo("\n  → `churnpilot run` acts on these with your approval at each step.")
+
+
 if __name__ == "__main__":  # pragma: no cover
     app()

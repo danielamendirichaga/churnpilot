@@ -146,3 +146,9 @@
 - `churnpilot/profile.py`: `profile_frame` binarizes the target via `positive_value` (the same rule `train`/`evaluate` use) before computing feature–target correlations, instead of `pd.to_numeric(...)` — which turned string labels like `"Yes"/"No"` into all-NaN and left `target_corr` (and thus the leakage hint) blank on real data. Backward-compatible for 0/1 targets.
 - `tests/test_profile.py`: added a "Yes"/"No" string-label correlation test. Suite **148 green**; ruff + mypy clean.
 - Surfaced by running the full pipeline on the real IBM Telco Customer Churn dataset (7,043 rows) — the synthetic data's 0/1 target had never exposed it.
+
+## 2026-07-17 — S19: advise — the copilot recommendation engine (#19)
+- `churnpilot/recommend.py`: deterministic, unit-tested rules — one per decision gate — each returning a `Recommendation` (what / why / structured action): `recommend_features` (flag leakage for exclusion), `recommend_split` (time vs random by date_col), `recommend_model` (**stability over peak AUC** — recommends the most stable, names the overfitter), `recommend_policy` (needs a value_col), `recommend_retrain` (from a drift report), `recommend_ship` (go/no-go on AUC + ECE). Judgment-*support* as tested rules, not an LLM — the final call stays human.
+- `churnpilot/cli.py`: `advise` command prints the pre-flight recommendations (features / split / policy).
+- `tests/test_recommend.py` (12): every rule, incl. stable-over-overfit model pick and go/no-go thresholds. Suite **160 green**; ruff + mypy clean.
+- Smoke on the real IBM Telco data: keep all features (no leak), random split (snapshot), cost-based policy (value_col present). Sets up S20's interactive `run`. (Closes #19)
